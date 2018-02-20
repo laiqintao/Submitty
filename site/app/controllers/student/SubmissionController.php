@@ -85,10 +85,26 @@ class SubmissionController extends AbstractController {
                 $this->core->getOutput()->renderOutput(array('submission', 'Homework'), 'noGradeable', $gradeable_id);
                 return array('error' => true, 'message' => 'No gradeable with that id.');
             }
-            else if ($gradeable->isTeamAssignment() && $gradeable->getTeam() === null && !$this->core->getUser()->accessAdmin()) {
-                $this->core->addErrorMessage('Must be on a team to access submission');
-                $this->core->redirect($this->core->getConfig()->getSiteUrl());
-                return array('error' => true, 'message' => 'Must be on a team to access submission.');                
+            else if ($gradeable->isTeamAssignment() && !$this->core->getUser()->accessAdmin()) {
+                if ($gradeable->getTeam() === null) {
+                    $this->core->addErrorMessage('Must be on a team to access submission');
+                    $this->core->redirect($this->core->getConfig()->getSiteUrl());
+                    return array('error' => true, 'message' => 'Must be on a team to access submission.');
+                }
+                else {
+                    // Check status for each team member
+                    $team = $gradeable->getTeam();
+                    foreach ($team->getMembers() as $member)
+                    {
+                        $ldu = $this->core->loadModel(LateDaysCalculation::class, $member->getId());
+                        $late_days = $ldu->getGradeable($member->getId(), $gradeable_id);
+                        if(substr($late_days['status'], 0, 3) == 'Bad') {
+                            $msg = '$member does not have enough late days';
+                            $return = array('success' => true, 'message' => $msg);
+                        }
+                    }
+                    return $return;
+                }
             }
             else {
                 $loc = array('component' => 'student',
