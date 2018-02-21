@@ -234,6 +234,7 @@ HTML;
                     continue;
                 }
 
+
                 if ($g_data->getActiveVersion() < 1){
                     if ($title == "GRADED" || $title == "ITEMS BEING GRADED"){
                         $title = "CLOSED";

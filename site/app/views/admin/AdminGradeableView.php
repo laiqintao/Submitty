@@ -361,7 +361,7 @@ HTML;
                 <br /><br />
                 
                 <div id="rubric_questions" class="bool_val rubric_questions">
-<!--
+
                 Will this assignment have peer grading?
                 <fieldset>
                     <input type="radio" id="peer_yes_radio" name="peer_grading" value="true" class="peer_yes"
@@ -615,11 +615,10 @@ HTML;
         $html_output .= <<<HTML
             <div id="pdf_page_{$num}" class="pdf_page_input" {$pdf_page_display}>Page:&nbsp;&nbsp;<input type="number" name="page_component_{$num}" value="{$pdf_page}" class="page_component" max="1000" step="1" style="width:50px; resize:none;"/></div>
 HTML;
-        /*
         $html_output .= <<<HTML
                 <div id="peer_checkbox_{$num}" class="peer_input" {$display_peer_checkboxes}>Peer Component:&nbsp;&nbsp;<input type="checkbox" name="peer_component_{$num}" value="on" class="peer_component" {$peer_checked} /></div>
                 <div id="pdf_page_{$num}" class="pdf_page_input" {$display_pdf_page_input}>Page:&nbsp;&nbsp;<input type="number" name="page_component_{$num}" value={$pdf_page} class="page_component" max="1000" step="1" style="width:50px; resize:none;" /></div>
-HTML;*/
+HTML;
         if ($num > 1){
         $html_output .= <<<HTML
                 <!--
@@ -2222,9 +2221,9 @@ $('#gradeable-form').on('submit', function(e){
             <br> \
             <input type="radio" id="id_grade_by_down-'+newQ+'" name="grade_by-'+newQ+'" value="count_down" data-question_num="'+newQ+'" onclick="onDeduction(this);"> Grade by count down \
                 <br /> \
-                <!--\
+                \
                 <div id="peer_checkbox_'+newQ+'" class="peer_input" '+display+'>Peer Component:&nbsp;&nbsp;<input type="checkbox" name="peer_component_'+newQ+'" value="on" class="peer_component" /></div> \
-                -->\
+                \
                 <div id="pdf_page_'+newQ+'" class="pdf_page_input" '+displayPage+'>Page:&nbsp;&nbsp;<input type="number" name="page_component_'+newQ+'" value="1" class="page_component" max="1000" step="1" style="width:50px; resize:none;"/></div> \
                 <!--\
                 <a id="delete-'+newQ+'" class="question-icon" onclick="deleteQuestion('+newQ+');"> \

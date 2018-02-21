@@ -308,13 +308,13 @@ class AdminGradeableController extends AbstractController {
             //Adds/Edits/Deletes the Marks
             $index = 1;
             foreach ($components as $comp) {
-                $marks = $comp->getMarks();
                 if(is_array($comp)) {
                     $comp = $comp[0];
                 }
                 if($comp->getOrder() == -1) {
                     continue;
                 }
+                $marks = $comp->getMarks();
 
                 $num_marks = 0;
                 foreach($_POST as $k=>$v){
