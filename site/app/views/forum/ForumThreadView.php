@@ -170,8 +170,8 @@ HTML;
             }
 
             $thread_id = -1;
-            $function_content = 'nl2br';
             $userAccessToAnon = ($this->core->getUser()->getGroup() < 4) ? true : false;
+            $title_html = '';
             $return .= <<< HTML
 					</div>
 					<div style="display:inline-block;width:70%; float: right;" class="posts_list">
@@ -197,9 +197,7 @@ HTML;
             }
             $title_html .= <<< HTML
 					{$activeThreadTitle}</h3>
-
 HTML;
-
             $first = true;
             foreach($posts as $post){
 
@@ -220,7 +218,6 @@ HTML;
                 $classes = "post_box";
 
                 if($first){
-                    $first = false;
                     $classes .= " first_post";
                 }
 
@@ -290,8 +287,6 @@ HTML;
 
                 }
                 $return .= <<<HTML
-			
-<h7 style="margin-top:5px;float:right;"><strong>{$visible_username}</a></strong> {$function_date($date,"m/d/Y g:i A")}</h7>
 </div>
 HTML;
 
