@@ -10,24 +10,24 @@ use app\libraries\FileUtils;
 class ForumThreadView extends AbstractView {
 
 
-	public function forumAccess(){
+    public function forumAccess(){
         return $this->core->getConfig()->isForumEnabled();
     }
-	
-	/** Shows Forums thread splash page, including all posts
-		for a specific thread, in addition to all of the threads
-		that have been created to be displayed in the left panel.
-	*/
-	public function showForumThreads($user, $posts, $threads) {
-		if(!$this->forumAccess()){
-			$this->core->redirect($this->core->buildUrl(array('component' => 'navigation')));
-			return;
-		}
 
-		$this->core->getOutput()->addBreadcrumb("Discussion Forum", $this->core->buildUrl(array('component' => 'forum', 'page' => 'view_thread')));
-		
-		//Body Style is necessary to make sure that the forum is still readable...
-		$return = <<<HTML
+    /** Shows Forums thread splash page, including all posts
+    for a specific thread, in addition to all of the threads
+    that have been created to be displayed in the left panel.
+     */
+    public function showForumThreads($user, $posts, $threads) {
+        if(!$this->forumAccess()){
+            $this->core->redirect($this->core->buildUrl(array('component' => 'navigation')));
+            return;
+        }
+
+        $this->core->getOutput()->addBreadcrumb("Discussion Forum", $this->core->buildUrl(array('component' => 'forum', 'page' => 'view_thread')));
+
+        //Body Style is necessary to make sure that the forum is still readable...
+        $return = <<<HTML
 
 		<link rel="stylesheet" href="{$this->core->getConfig()->getBaseUrl()}css/iframe/codemirror.css" />
     <link rel="stylesheet" href="{$this->core->getConfig()->getBaseUrl()}css/iframe/eclipse.css" />
@@ -53,8 +53,8 @@ class ForumThreadView extends AbstractView {
 		</script>
 
 HTML;
-	if($this->core->getUser()->getGroup() <= 2){
-		$return .= <<<HTML
+        if($this->core->getUser()->getGroup() <= 2){
+            $return .= <<<HTML
 		<script>
 								function changeName(element, user, visible_username, anon){
 									new_element = element.getElementsByTagName("strong")[0];
@@ -83,8 +83,8 @@ HTML;
 								}
 		</script>
 HTML;
-	}
-	$return .= <<<HTML
+        }
+        $return .= <<<HTML
 		<div style="margin-top:5px;background-color:transparent; margin: !important auto;padding:0px;box-shadow: none;" class="content">
 
 		<div style="margin-top:10px; margin-bottom:10px; height:50px;  " id="forum_bar">
@@ -93,73 +93,73 @@ HTML;
 		</div>
 
 HTML;
-		if(count($threads) == 0){
-		$return .= <<<HTML
+        if(count($threads) == 0){
+            $return .= <<<HTML
 					<div style="margin-left:20px;margin-top:10px;margin-right:20px;padding:25px; text-align:center;" class="content">
 						<h4>A thread hasn't been created yet. Be the first to do so!</h4>
 					</div>
 				</div>
 HTML;
-		} else {
+        } else {
 
 
-			$return .= <<<HTML
+            $return .= <<<HTML
 				<div id="forum_wrapper">
 					<div class="thread_list">
 HTML;
-					$used_active = false; //used for the first one if there is not thread_id set
-					$function_date = 'date_format';
-					$activeThreadTitle = "";
-					$activeThread = array();
-					$current_user = $this->core->getUser()->getId();
-					$activeThreadAnnouncement = false;
-					$start = 0;
-					$end = 10;
-					foreach($threads as $thread){
-						$first_post = $this->core->getQueries()->getFirstPostForThread($thread["id"]);
-						$date = date_create($first_post['timestamp']);
-						$class = "thread_box";
-						//Needs to be refactored to rid duplicated code
-						if(!isset($_REQUEST["thread_id"]) && !$used_active){
-							$class .= " active";
-							$used_active = true;
-							$activeThread = $thread;
-							$activeThreadTitle = $thread["title"];
-							if($thread["pinned"])
-								$activeThreadAnnouncement = true;
-						} else if(isset($_REQUEST["thread_id"]) && $_REQUEST["thread_id"] == $thread["id"]) {
-							$class .= " active";
-							$activeThreadTitle = $thread["title"];
-							$activeThread = $thread;
-							if($thread["pinned"])
-								$activeThreadAnnouncement = true;
-						}
+            $used_active = false; //used for the first one if there is not thread_id set
+            $function_date = 'date_format';
+            $activeThreadTitle = "";
+            $activeThread = array();
+            $current_user = $this->core->getUser()->getId();
+            $activeThreadAnnouncement = false;
+            $start = 0;
+            $end = 10;
+            foreach($threads as $thread){
+                $first_post = $this->core->getQueries()->getFirstPostForThread($thread["id"]);
+                $date = date_create($first_post['timestamp']);
+                $class = "thread_box";
+                //Needs to be refactored to rid duplicated code
+                if(!isset($_REQUEST["thread_id"]) && !$used_active){
+                    $class .= " active";
+                    $used_active = true;
+                    $activeThread = $thread;
+                    $activeThreadTitle = $thread["title"];
+                    if($thread["pinned"])
+                        $activeThreadAnnouncement = true;
+                } else if(isset($_REQUEST["thread_id"]) && $_REQUEST["thread_id"] == $thread["id"]) {
+                    $class .= " active";
+                    $activeThreadTitle = $thread["title"];
+                    $activeThread = $thread;
+                    if($thread["pinned"])
+                        $activeThreadAnnouncement = true;
+                }
 
-						if($this->core->getQueries()->viewedThread($current_user, $thread["id"])){
-							$class .= " viewed";
-						}
-						$first_post_content = str_replace("&lbrack;&sol;code&rsqb;", "", str_replace("&lbrack;code&rsqb;", "", strip_tags($first_post["content"])));
-						$sizeOfContent = strlen($first_post_content);
-						$contentDisplay = substr($first_post_content, 0, ($sizeOfContent < 80) ? $sizeOfContent : strpos($first_post_content, " ", 70));
-						$titleLength = strlen($thread['title']);
-						$titleDisplay = substr($thread["title"], 0, ($titleLength < 30) ? $titleLength : strpos($thread['title'], " ", 29));
-						if(strlen($first_post["content"]) > 80){
-							$contentDisplay .= "...";
-						}
-						if(strlen($thread["title"]) > 30){
-							$titleDisplay .= "...";
-						}
-						$return .= <<<HTML
+                if($this->core->getQueries()->viewedThread($current_user, $thread["id"])){
+                    $class .= " viewed";
+                }
+                $first_post_content = str_replace("&lbrack;&sol;code&rsqb;", "", str_replace("&lbrack;code&rsqb;", "", strip_tags($first_post["content"])));
+                $sizeOfContent = strlen($first_post_content);
+                $contentDisplay = substr($first_post_content, 0, ($sizeOfContent < 80) ? $sizeOfContent : strpos($first_post_content, " ", 70));
+                $titleLength = strlen($thread['title']);
+                $titleDisplay = substr($thread["title"], 0, ($titleLength < 30) ? $titleLength : strpos($thread['title'], " ", 29));
+                if(strlen($first_post["content"]) > 80){
+                    $contentDisplay .= "...";
+                }
+                if(strlen($thread["title"]) > 30){
+                    $titleDisplay .= "...";
+                }
+                $return .= <<<HTML
 						<a href="{$this->core->buildUrl(array('component' => 'forum', 'page' => 'view_thread', 'thread_id' => $thread['id']))}">
 						<div class="{$class}">
 HTML;
-						if($thread["pinned"] == true){
-							$return .= <<<HTML
+                if($thread["pinned"] == true){
+                    $return .= <<<HTML
 							<i class="fa fa-star" style="position:relative; float:right; display:inline-block; color:gold; -webkit-text-stroke-width: 1px;
     -webkit-text-stroke-color: black;" aria-hidden="true"></i>
 HTML;
-						}
-						$return .= <<<HTML
+                }
+                $return .= <<<HTML
 						<h4>{$titleDisplay}</h4>
 						<h5 style="font-weight: normal;">{$contentDisplay}</h5>
 						<h5 style="float:right; font-weight:normal;margin-top:5px">{$function_date($date,"m/d/Y g:i A")}</h5>
@@ -167,12 +167,12 @@ HTML;
 						</a>
 						<hr style="margin-top: 0px;margin-bottom:0px;">
 HTML;
-					}
+            }
 
-			$thread_id = -1;
-			$function_content = 'nl2br';
-			$userAccessToAnon = ($this->core->getUser()->getGroup() < 4) ? true : false;
-			$return .= <<< HTML
+            $thread_id = -1;
+            $function_content = 'nl2br';
+            $userAccessToAnon = ($this->core->getUser()->getGroup() < 4) ? true : false;
+            $return .= <<< HTML
 					</div>
 					<div style="display:inline-block;width:70%; float: right;" class="posts_list">
 HTML;
@@ -180,82 +180,82 @@ HTML;
             $title_html .= <<< HTML
             <h3 style="max-width: 95%; display:inline-block;word-wrap: break-word;margin-top:10px; margin-left: 5px;">
 HTML;
-					if($this->core->getUser()->getGroup() <= 2 && $activeThreadAnnouncement){
-                        $title_html .= <<<HTML
+            if($this->core->getUser()->getGroup() <= 2 && $activeThreadAnnouncement){
+                $title_html .= <<<HTML
 							<a style="display:inline-block; color:orange; " onClick="alterAnnouncement({$activeThread['id']}, 'Are you sure you want to remove this thread as an announcement?', 'remove_announcement')" title="Remove thread from announcements"><i class="fa fa-star" onmouseleave="changeColor(this, 'gold')" onmouseover="changeColor(this, '#e0e0e0')" style="position:relative; display:inline-block; color:gold; -webkit-text-stroke-width: 1px;
     -webkit-text-stroke-color: black;" aria-hidden="true"></i></a>
 HTML;
-                    } else if($activeThreadAnnouncement){
-                        $title_html .= <<<HTML
+            } else if($activeThreadAnnouncement){
+                $title_html .= <<<HTML
 						 <i class="fa fa-star" style="position:relative; display:inline-block; color:gold; -webkit-text-stroke-width: 1px; -webkit-text-stroke-color: black;" aria-hidden="true"></i>
 HTML;
-                    } else if($this->core->getUser()->getGroup() <= 2 && !$activeThreadAnnouncement){
-                        $title_html .= <<<HTML
+            } else if($this->core->getUser()->getGroup() <= 2 && !$activeThreadAnnouncement){
+                $title_html .= <<<HTML
 							<a style="position:relative; display:inline-block; color:orange; " onClick="alterAnnouncement({$activeThread['id']}, 'Are you sure you want to make this thread an announcement?', 'make_announcement')" title="Make thread an announcement"><i class="fa fa-star" onmouseleave="changeColor(this, '#e0e0e0')" onmouseover="changeColor(this, 'gold')" style="position:relative; display:inline-block; color:#e0e0e0; -webkit-text-stroke-width: 1px;
     -webkit-text-stroke-color: black;" aria-hidden="true"></i></a>
 HTML;
-                    }
-                    $title_html .= <<< HTML
+            }
+            $title_html .= <<< HTML
 					{$activeThreadTitle}</h3>
 
 HTML;
 
-                    $first = true;
-					foreach($posts as $post){
-						
-						if($thread_id == -1) {
-							$thread_id = $post["thread_id"];
-							$thread_dir = FileUtils::joinPaths(FileUtils::joinPaths($this->core->getConfig()->getCoursePath(), "forum_attachments"), $thread_id);
-						}
-						$date = date_create($post["timestamp"]);
+            $first = true;
+            foreach($posts as $post){
 
-						$full_name = $this->core->getQueries()->getDisplayUserNameFromUserId($post["author_user_id"]);
+                if($thread_id == -1) {
+                    $thread_id = $post["thread_id"];
+                    $thread_dir = FileUtils::joinPaths(FileUtils::joinPaths($this->core->getConfig()->getCoursePath(), "forum_attachments"), $thread_id);
+                }
+                $date = date_create($post["timestamp"]);
 
-						if($post["anonymous"]){
-							$visible_username = "Anonymous";
-						} else {
-							$visible_username = substr($full_name, 0, strpos($full_name, " ")+2) . ".";
-						}
+                $full_name = $this->core->getQueries()->getDisplayUserNameFromUserId($post["author_user_id"]);
 
-						$classes = "post_box";
+                if($post["anonymous"]){
+                    $visible_username = "Anonymous";
+                } else {
+                    $visible_username = substr($full_name, 0, strpos($full_name, " ")+2) . ".";
+                }
 
-						if($first){
-						    $first = false;
-						    $classes .= " first_post";
-                        }
+                $classes = "post_box";
 
-						if($this->core->getQueries()->isStaffPost($post["author_user_id"])){
-							$classes .= " important";
-						}
+                if($first){
+                    $first = false;
+                    $classes .= " first_post";
+                }
 
-                        $return .= <<<HTML
+                if($this->core->getQueries()->isStaffPost($post["author_user_id"])){
+                    $classes .= " important";
+                }
+
+                $return .= <<<HTML
 							<div class="$classes" style="margin-left:0;">
 HTML;
-						if($first){
-                            $first = false;
-                            $return .= $title_html;
-                        }
+                if($first){
+                    $first = false;
+                    $return .= $title_html;
+                }
 
-                        $codeBracketString = "&lbrack;&sol;code&rsqb;";
-                        if(strpos($post['content'], "&NewLine;&lbrack;&sol;code&rsqb;") !== false){
-                        	$codeBracketString = "&NewLine;" . $codeBracketString;
-                        }
+                $codeBracketString = "&lbrack;&sol;code&rsqb;";
+                if(strpos($post['content'], "&NewLine;&lbrack;&sol;code&rsqb;") !== false){
+                    $codeBracketString = "&NewLine;" . $codeBracketString;
+                }
 
 
-                        $post_content = str_replace($codeBracketString, '</textarea>', str_replace('&lbrack;code&rsqb;', '<textarea id="code">', $post["content"]));
+                $post_content = str_replace($codeBracketString, '</textarea>', str_replace('&lbrack;code&rsqb;', '<textarea id="code">', $post["content"]));
 
-                        //This code is for legacy posts that had an extra \r per newline
-                        if(strpos($post['content'], "\r") !== false){
-                        	$post_content = str_replace("\r","", $post_content);
-                        }
+                //This code is for legacy posts that had an extra \r per newline
+                if(strpos($post['content'], "\r") !== false){
+                    $post_content = str_replace("\r","", $post_content);
+                }
 
-						if($this->core->getUser()->getGroup() <= 2){
-							$return .= <<<HTML
+                if($this->core->getUser()->getGroup() <= 2){
+                    $return .= <<<HTML
 							<a class="post_button" style="position:absolute; display:inline-block; color:red; float:right;" onClick="deletePost( {$post['thread_id']}, {$post['id']}, '{$post['author_user_id']}', '{$function_date($date,'m/d/Y g:i A')}' )" title="Remove post"><i class="fa fa-times" aria-hidden="true"></i></a>
 HTML;
-							}
+                }
 
-						$return .= <<<HTML
+                $return .= <<<HTML
 							<pre><p class="post_content" style="white-space: pre-wrap; ">{$post_content}</p></pre>
 							
 							
@@ -263,41 +263,41 @@ HTML;
 							
 HTML;
 
-if($this->core->getUser()->getGroup() <= 2){
-						$info_name = $full_name . " (" . $post['author_user_id'] . ")";
-						$jscriptAnonFix = $post['anonymous'] ? 'true' : 'false' ;
-						$return .= <<<HTML
+                if($this->core->getUser()->getGroup() <= 2){
+                    $info_name = $full_name . " (" . $post['author_user_id'] . ")";
+                    $jscriptAnonFix = $post['anonymous'] ? 'true' : 'false' ;
+                    $return .= <<<HTML
 						<a style=" margin-right:2px;display:inline-block; color:black; " onClick="changeName(this.parentNode, '{$info_name}', '{$visible_username}', {$jscriptAnonFix})" title="Show full user information"><i class="fa fa-eye" aria-hidden="true"></i></a>
 HTML;
-}
-			$return .= <<<HTML
+                }
+                $return .= <<<HTML
 			
 <h7><strong id="post_user_id">{$visible_username}</strong> {$function_date($date,"m/d/Y g:i A")}</h7></span>
 HTML;
 
-						if($post["has_attachment"]){
-							$post_dir = FileUtils::joinPaths($thread_dir, $post["id"]);
-							$files = FileUtils::getAllFiles($post_dir);
-							foreach($files as $file){
-								$path = rawurlencode(htmlspecialchars($file['path']));
-								$name = rawurlencode(htmlspecialchars('"'.$file['name'].'"'));
-								$name_display = htmlentities(rawurldecode($file['name']), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-								$return .= <<<HTML
+                if($post["has_attachment"]){
+                    $post_dir = FileUtils::joinPaths($thread_dir, $post["id"]);
+                    $files = FileUtils::getAllFiles($post_dir);
+                    foreach($files as $file){
+                        $path = rawurlencode(htmlspecialchars($file['path']));
+                        $name = rawurlencode(htmlspecialchars('"'.$file['name'].'"'));
+                        $name_display = htmlentities(rawurldecode($file['name']), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $return .= <<<HTML
 							<a href="#" style="text-decoration:none;display:inline-block;white-space: nowrap;" class="btn-default btn-sm" onclick="openFile('forum_attachments', '{$name}', '{$path}')" > {$name_display} </a>
 HTML;
 
-							}
-							
-						}
-			$return .= <<<HTML
+                    }
+
+                }
+                $return .= <<<HTML
 			
 <h7 style="margin-top:5px;float:right;"><strong>{$visible_username}</a></strong> {$function_date($date,"m/d/Y g:i A")}</h7>
 </div>
 HTML;
-						
-					}
 
-			$return .= <<<HTML
+            }
+
+            $return .= <<<HTML
 			
 					<form style="margin:20px;" method="POST" action="{$this->core->buildUrl(array('component' => 'forum', 'page' => 'publish_post'))}" enctype="multipart/form-data">
 					<input type="hidden" name="thread_id" value="{$thread_id}" />
@@ -330,13 +330,13 @@ HTML;
 				</div>
 				</div>
 HTML;
-		}
+        }
 
-if(isset($_SESSION["post_content"]) && isset($_SESSION["post_recover_active"])){
-			
-	$post_content = html_entity_decode($_SESSION["post_content"]);
+        if(isset($_SESSION["post_content"]) && isset($_SESSION["post_recover_active"])){
 
-	$return .= <<<HTML
+            $post_content = html_entity_decode($_SESSION["post_content"]);
+
+            $return .= <<<HTML
 			<script>
 				var contentBox = document.getElementById('post_content');
 				contentBox.innerHTML = `{$post_content}`;
@@ -345,10 +345,10 @@ if(isset($_SESSION["post_content"]) && isset($_SESSION["post_recover_active"])){
 				box.scrollTop(box.prop('scrollHeight'));
 			</script>
 HTML;
-		$_SESSION["post_recover_active"] = null;
-}
+            $_SESSION["post_recover_active"] = null;
+        }
 
-	$return .= <<<HTML
+        $return .= <<<HTML
 	<script>
 		var codeSegments = document.querySelectorAll("[id=code]");
 		for (let element of codeSegments){
@@ -373,19 +373,19 @@ HTML;
 	    </script>
 HTML;
 
-		return $return;
-	}
+        return $return;
+    }
 
-	public function createThread() {
+    public function createThread() {
 
-		if(!$this->forumAccess()){
-			$this->core->redirect($this->core->buildUrl(array('component' => 'navigation')));
-			return;
-		}
+        if(!$this->forumAccess()){
+            $this->core->redirect($this->core->buildUrl(array('component' => 'navigation')));
+            return;
+        }
 
-		$this->core->getOutput()->addBreadcrumb("Discussion Forum", $this->core->buildUrl(array('component' => 'forum', 'page' => 'view_thread')));
-		$this->core->getOutput()->addBreadcrumb("Create Thread", $this->core->buildUrl(array('component' => 'forum', 'page' => 'create_thread')));
-		$return = <<<HTML
+        $this->core->getOutput()->addBreadcrumb("Discussion Forum", $this->core->buildUrl(array('component' => 'forum', 'page' => 'view_thread')));
+        $this->core->getOutput()->addBreadcrumb("Create Thread", $this->core->buildUrl(array('component' => 'forum', 'page' => 'create_thread')));
+        $return = <<<HTML
 
 		<script> 
 			$( document ).ready(function() {
@@ -432,14 +432,14 @@ HTML;
 				<span style="display:inline-block;float:right;">
             	<label for="Anon">Anonymous (to class)?</label> <input type="checkbox" style="margin-right:15px;display:inline-block;" name="Anon" value="Anon" />
 HTML;
-				
-				if($this->core->getUser()->getGroup() <= 2){
-						$return .= <<<HTML
+
+        if($this->core->getUser()->getGroup() <= 2){
+            $return .= <<<HTML
 						<label style="display:inline-block;" for="Announcement">Announcement?</label> <input type="checkbox" style="margin-right:15px;display:inline-block;" name="Announcement" value="Announcement" />
 HTML;
 
-				}
-				$return .= <<<HTML
+        }
+        $return .= <<<HTML
 				<input type="submit" style="display:inline-block;" name="post" value="Post" class="btn btn-primary" />
 				</span>
             	</div>
@@ -451,12 +451,12 @@ HTML;
 		</div>
 HTML;
 
-if(isset($_SESSION["thread_title"]) && isset($_SESSION["thread_content"]) && isset($_SESSION["thread_recover_active"])){
-	$title = html_entity_decode($_SESSION["thread_title"]);
-			
-	$thread_content = html_entity_decode($_SESSION["thread_content"]);
+        if(isset($_SESSION["thread_title"]) && isset($_SESSION["thread_content"]) && isset($_SESSION["thread_recover_active"])){
+            $title = html_entity_decode($_SESSION["thread_title"]);
 
-	$return .= <<<HTML
+            $thread_content = html_entity_decode($_SESSION["thread_content"]);
+
+            $return .= <<<HTML
 			<script>
 				var titleBox = document.getElementById('title');
 				titleBox.value = `{$title}`;
@@ -465,9 +465,9 @@ if(isset($_SESSION["thread_title"]) && isset($_SESSION["thread_content"]) && iss
 				document.getElementById('file_input').value = null;
 			</script>
 HTML;
-		unset($_SESSION["thread_recover_active"]);
-}
-		return $return;
-	}
+            unset($_SESSION["thread_recover_active"]);
+        }
+        return $return;
+    }
 
 }
