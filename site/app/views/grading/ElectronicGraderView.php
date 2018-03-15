@@ -748,11 +748,15 @@ HTML;
                     $temp_counter++;
                 }
 
+                $linkid = $row->getUser()->getId();
+                if($peer){
+                    $linkid = $row->getUser()->getAnonId();
+                }
 
                 $return .= <<<HTML
                 </td>
                 <td>
-                    <a class="btn {$btn_class}" href="{$this->core->buildUrl(array('component'=>'grading', 'page'=>'electronic', 'action'=>'grade', 'gradeable_id'=>$gradeable->getId(), 'who_id'=>$row->getUser()->getId(), 'individual'=>'1'))}">
+                    <a class="btn {$btn_class}" href="{$this->core->buildUrl(array('component'=>'grading', 'page'=>'electronic', 'action'=>'grade', 'gradeable_id'=>$gradeable->getId(), 'who_id'=>$linkid, 'individual'=>'1'))}">
                         {$contents}
                     </a>
                 </td>
@@ -1023,12 +1027,15 @@ HTML;
                 $working_dir[$file['name']] = $file['path'];
             }
         }
-        function display_files($files, &$count, $indent, &$return, $filename) {
+        function display_files($files, &$count, $indent, &$return, $filename, $peer=false, $user_id="", $anon_id="") {
             $name = "a" . $filename;
             foreach ($files as $dir => $path) {
                 if (!is_array($path)) {
                     $name = htmlentities($dir);
                     $dir = urlencode(htmlspecialchars($dir));
+                    if($peer){
+                        $path = str_replace($user_id, $anon_id, $path);
+                    }
                     $path = urlencode(htmlspecialchars($path));
                     $indent_offset = $indent * -15;
                     $return .= <<<HTML
@@ -1038,7 +1045,13 @@ HTML;
                             <span class="fa fa-plus-circle" style='vertical-align:text-bottom;'></span>
                         {$name}</a> &nbsp;
                         <a onclick='openFile("{$dir}", "{$path}")'><i class="fa fa-window-restore" aria-hidden="true" title="Pop up the file in a new window"></i></a>
-                        <a onclick='downloadFile("{$dir}", "{$path}")'><i class="fa fa-download" aria-hidden="true" title="Download the file"></i></a>
+HTML;
+                        if(!$peer){
+                            $return .= <<<HTML
+                                 <a onclick='downloadFile("{$dir}", "{$path}")'><i class="fa fa-download" aria-hidden="true" title="Download the file"></i></a>
+HTML;
+                        }
+                    $return.= <<<HTML
                     </div><br/>
                     <div id="file_viewer_{$count}" style="margin-left:{$indent_offset}px" data-file_name="{$dir}" data-file_url="{$path}"></div>
                 </div>
@@ -1060,7 +1073,7 @@ HTML;
                 <div id='div_viewer_{$count}' style='margin-left:15px; display: none' data-file_name="{$dir}">
 HTML;
                     $count++;
-                    display_files($contents, $count, $indent+1, $return, $filename);
+                    display_files($contents, $count, $indent+1, $return, $filename, $peer, $user_id, $anon_id);
                     $return .= <<<HTML
                 </div>
             </div>
@@ -1068,6 +1081,7 @@ HTML;
                 }
             }
         }
+
         $files = array();
         $submissions = array();
         $results = array();
@@ -1077,24 +1091,33 @@ HTML;
         // if you change here, then change there as well
         // order of these statements matter I believe
 
-        add_files($submissions, array_merge($gradeable->getMetaFiles(), $gradeable->getSubmittedFiles()), 'submissions');
+        add_files($submissions, array_merge($gradeable->getMetaFiles(), $gradeable->getSubmittedFiles()), 'submissions', $peer);
 
         $vcsFiles = $gradeable->getVcsFiles();
         if( count( $vcsFiles ) != 0 ) { //if there are checkout files, then display folder, otherwise don't
-            add_files($checkout,  $vcsFiles, 'checkout');
+            add_files($checkout,  $vcsFiles, 'checkout', $peer);
         }
 
-        add_files($results, $gradeable->getResultsFiles(), 'results');
+        if(!$peer) {
+            add_files($results, $gradeable->getResultsFiles(), 'results');
+        }
 
         $count = 1;
-        display_files($submissions,$count,1,$return, "submissions"); //modifies the count var here within display_files
+        $user = $gradeable->getUser();
+        display_files($submissions,$count,1,$return, "submissions",
+            $peer, $user->getId(), $user->getAnonId());
 
         if( count( $vcsFiles ) != 0 ) { //if there are checkout files, then display folder, otherwise don't
-            display_files($checkout,$count,1,$return, "checkout");
+            display_files($checkout,$count,1,$return, "checkout",
+                $peer, $user->getId(), $user->getAnonId());
         }
 
-        display_files($results,$count,1,$return, "results"); //uses the modified count variable b/c old code did this not sure if needed
-        $files = array_merge($submissions, $checkout, $results );
+        if(!$peer) {
+            display_files($results, $count, 1, $return, "results",
+                $peer, $user->getId(), $user->getAnonId()); //uses the modified count variable b/c old code did this not sure if needed
+        }
+
+        $files = array_merge($submissions, $checkout, $results);
 
         $return .= <<<HTML
         <script type="text/javascript">

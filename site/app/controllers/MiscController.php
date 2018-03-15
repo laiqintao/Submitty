@@ -30,6 +30,22 @@ class MiscController extends AbstractController {
         }
     }
 
+    //If there is an anon_id in this file-path, replace it with the real id.
+    private function unAnonymizePath($path){
+        $newpath = $path;
+
+        //TODO: Is this efficient enough?
+        foreach($this->core->getQueries()->getPee() as $anon_id){
+            if(strpos($path, $anon_id) === false)
+                continue;
+
+            $real_id = $this->core->getQueries()->getUserFromAnon($anon_id)[$anon_id];
+            $newpath = str_replace($anon_id, $real_id, $path);
+        }
+
+        return $newpath;
+    }
+
     // function to check that this is a valid access request
     private function checkValidAccess($is_zip, &$error_string) {
         $error_string="";
@@ -41,7 +57,8 @@ class MiscController extends AbstractController {
         // from this point on, is not a zip
         // do path and permissions checking
         $dir = $_REQUEST['dir'];
-        $path = $_REQUEST['path'];
+        $ogpath = $_REQUEST['path'];
+        $path = $this->unAnonymizePath($ogpath);
 
         foreach (explode(DIRECTORY_SEPARATOR, $path) as $part) {
             if ($part == ".." || $part == ".") {
@@ -109,7 +126,19 @@ class MiscController extends AbstractController {
             // gradeable to get temporary info from
             // if team, get one of the user ids via the team id
             $current_gradeable = $this->core->getQueries()->getGradeable($path_gradeable_id, $current_user_id);
-            if($current_gradeable->getPeerGrading()) {
+
+            //If you are a peer grader
+            if($current_gradeable->getPeerGrading() && $this->core->getUser()->getGroup() == 4) {
+                //TODO: VCS?
+                if($dir != "submissions"){
+                    return false;
+                }
+
+                //Trying to access with an rcs id, if a peer grader tries this don't let them do it, will reveal username
+                if($ogpath == $path){
+                    return false;
+                }
+
                 $peer_grade_set = $this->core->getQueries()->getPeerAssignment($path_gradeable_id, $current_user_id);
                 if(in_array($path_user_id, $peer_grade_set)) {
                     return true;
@@ -174,12 +203,18 @@ class MiscController extends AbstractController {
     private function displayFile() {
         // security check
         $error_string="";
+
+        $original_path = $_REQUEST['path'];
+        $path = $this->unAnonymizePath($original_path);
+        $corrected_name =pathinfo($path, PATHINFO_DIRNAME)  . "/" . rawurlencode(basename($path));
+
+        $corrected_name = $this->unAnonymizePath($corrected_name);
+
         if (!$this->checkValidAccess(false,$error_string)) {
             $this->core->getOutput()->showError("You do not have access to this file ".$error_string);
             return false;
         }
 
-        $corrected_name = pathinfo($_REQUEST['path'], PATHINFO_DIRNAME) . "/" . rawurlencode( basename($_REQUEST['path']));
         $mime_type = FileUtils::getMimeType($corrected_name);
         $this->core->getOutput()->useHeader(false);
         $this->core->getOutput()->useFooter(false);
@@ -193,10 +228,10 @@ class MiscController extends AbstractController {
             $contents = htmlentities(file_get_contents($corrected_name), ENT_SUBSTITUTE);
             if ($_REQUEST['ta_grading'] === "true") {
                 $filename = htmlentities($corrected_name, ENT_SUBSTITUTE);
-                $this->core->getOutput()->renderOutput('Misc', 'displayCode', $mime_type, $corrected_name, $contents);
+                $this->core->getOutput()->renderOutput('Misc', 'displayCode', $mime_type, $corrected_name, $contents, $original_path);
             }
             else {
-                $this->core->getOutput()->renderOutput('Misc', 'displayFile', $contents);
+                $this->core->getOutput()->renderOutput('Misc', 'displayFile', $contents, $original_path);
             }
         }
     }

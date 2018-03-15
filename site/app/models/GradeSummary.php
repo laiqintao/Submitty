@@ -138,7 +138,14 @@ class GradeSummary extends AbstractModel {
     private function addText(&$this_g, $gradeable) {
         $text_items = array();
         foreach($gradeable->getComponents() as $component) {
-            array_push($text_items, array($component->getTitle() => $component->getComment()));
+            if(is_array($component)) {
+                foreach($component as $comp){
+                    //TODO: This might not be what we want to do if it's an array, idk
+                    array_push($text_items, array($comp->getTitle() => $comp->getComment()));
+                }
+            }else{
+                array_push($text_items, array($component->getTitle() => $component->getComment()));
+            }
         }
 
         if(count($text_items) > 0){

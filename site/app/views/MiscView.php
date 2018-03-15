@@ -51,12 +51,17 @@ HTML;
         return $return;
     }
 
-    public function displayCode($mime_type, $filename, $file_contents) {
+    public function displayCode($mime_type, $filename, $file_contents, $title='') {
+        //If we don't supply a title, set it equal to the file name.
+        if(func_num_args() == 3){
+            $title = $filename;
+        }
+
         $return = <<<HTML
 <!doctype html>
 <html>
 <head>
-    <title>{$filename}</title>
+    <title>{$title}</title>
     <link rel="stylesheet" href="{$this->core->getConfig()->getBaseUrl()}css/iframe/codemirror.css" />
     <link rel="stylesheet" href="{$this->core->getConfig()->getBaseUrl()}css/iframe/eclipse.css" />
     <script type="text/javascript" language="javascript" src="{$this->core->getConfig()->getBaseUrl()}js/iframe/jquery-2.0.3.min.map.js"></script>
