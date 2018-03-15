@@ -1032,11 +1032,11 @@ HTML;
             foreach ($files as $dir => $path) {
                 if (!is_array($path)) {
                     $name = htmlentities($dir);
-                    $dir = urlencode(htmlspecialchars($dir));
+                    $dir = rawurlencode(htmlspecialchars($dir));
                     if($peer){
                         $path = str_replace($user_id, $anon_id, $path);
                     }
-                    $path = urlencode(htmlspecialchars($path));
+                    $path = rawurlencode(htmlspecialchars($path));
                     $indent_offset = $indent * -15;
                     $return .= <<<HTML
                 <div>

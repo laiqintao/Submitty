@@ -56,8 +56,9 @@ class MiscController extends AbstractController {
         }
         // from this point on, is not a zip
         // do path and permissions checking
-        $dir = $_REQUEST['dir'];
-        $ogpath = $_REQUEST['path'];
+
+        $dir = $_GET['dir'];
+        $ogpath = $_GET['path'];
         $path = $this->unAnonymizePath($ogpath);
 
         foreach (explode(DIRECTORY_SEPARATOR, $path) as $part) {
@@ -204,23 +205,21 @@ class MiscController extends AbstractController {
         // security check
         $error_string="";
 
-        $original_path = $_REQUEST['path'];
-        $path = $this->unAnonymizePath($original_path);
-        $corrected_name =pathinfo($path, PATHINFO_DIRNAME)  . "/" . rawurlencode(basename($path));
-
-        $corrected_name = $this->unAnonymizePath($corrected_name);
-
         if (!$this->checkValidAccess(false,$error_string)) {
             $this->core->getOutput()->showError("You do not have access to this file ".$error_string);
             return false;
         }
 
+        $original_path = $_REQUEST['path'];
+        $path = $this->unAnonymizePath($original_path);
+        $corrected_name =pathinfo($path, PATHINFO_DIRNAME)  . "/" . rawurlencode(basename($path));
+        $corrected_name = $this->unAnonymizePath($corrected_name);
         $mime_type = FileUtils::getMimeType($corrected_name);
         $this->core->getOutput()->useHeader(false);
         $this->core->getOutput()->useFooter(false);
         if ($mime_type === "application/pdf" || Utils::startsWith($mime_type, "image/")) {
             header("Content-type: ".$mime_type);
-            header('Content-Disposition: inline; filename="' . basename($_REQUEST['path']) . '"');
+            header('Content-Disposition: inline; filename="' . basename(rawurldecode(htmlspecialchars_decode($_GET['path']))) . '"');
             readfile($corrected_name);
             $this->core->getOutput()->renderString($_REQUEST['path']);
         }
@@ -246,12 +245,14 @@ class MiscController extends AbstractController {
             $this->core->redirect($this->core->getConfig()->getSiteUrl());
         }
         
+        $filename = rawurldecode(htmlspecialchars_decode($_REQUEST['file']));
+
         $this->core->getOutput()->useHeader(false);
         $this->core->getOutput()->useFooter(false);
         header('Content-Type: application/octet-stream');
         header("Content-Transfer-Encoding: Binary"); 
-        header("Content-disposition: attachment; filename=\"{$_REQUEST['file']}\"");
-        readfile(pathinfo($_REQUEST['path'], PATHINFO_DIRNAME) . "/" . rawurlencode( basename($_REQUEST['path'])));
+        header("Content-disposition: attachment; filename=\"{$filename}\"");
+        readfile(pathinfo($_REQUEST['path'], PATHINFO_DIRNAME) . "/" . basename(rawurldecode(htmlspecialchars_decode($_GET['path']))));
     }
 
     private function downloadZip() {
