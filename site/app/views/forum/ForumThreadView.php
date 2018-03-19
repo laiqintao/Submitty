@@ -163,7 +163,7 @@ HTML;
 						$first_post_content = html_entity_decode($first_post['content'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
 						//replace tags from displaying in sidebar
-						$first_post_content = str_replace("[/code]", "", str_replace("[code]", "", strip_tags($first_post["content"])));
+						$first_post_content = str_replace("[/code]", "", str_replace("[code]", "", strip_tags($first_post_content)));
 						$temp_first_post_content = preg_replace('#\[url=(.*?)\](.*?)(\[/url\])#', '$2', $first_post_content);
 
 						if(!empty($temp_first_post_content)){
