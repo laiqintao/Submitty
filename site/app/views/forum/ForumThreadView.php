@@ -46,7 +46,6 @@ class ForumThreadView extends AbstractView {
 		}
 
 			$( document ).ready(function() {
-			    enableTabsInTextArea('post_content');
 			    saveScrollLocationOnRefresh('thread_list');
 			});
 
@@ -545,12 +544,6 @@ HTML;
 		$this->core->getOutput()->addBreadcrumb("Discussion Forum", $this->core->buildUrl(array('component' => 'forum', 'page' => 'view_thread')));
 		$this->core->getOutput()->addBreadcrumb("Create Thread", $this->core->buildUrl(array('component' => 'forum', 'page' => 'create_thread')));
 		$return = <<<HTML
-
-		<script> 
-			$( document ).ready(function() {
-			    enableTabsInTextArea('thread_content');
-			});
-		 </script>
 
 		<div style="margin-top:5px;background-color:transparent; margin: !important auto;padding:0px;box-shadow: none;" class="content">
 
