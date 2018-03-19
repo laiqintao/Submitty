@@ -872,7 +872,6 @@ function editPost(post_id, thread_id) {
                 thread_id: thread_id
             },
             success: function(data){
-                console.log(data);
                 try {
                     var json = JSON.parse(data);
                 } catch (err){

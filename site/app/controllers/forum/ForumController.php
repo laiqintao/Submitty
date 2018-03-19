@@ -178,7 +178,7 @@ class ForumController extends AbstractController {
                 } else {
                     $type = "post";
                 }
-                $this->core->getOutput()->renderJson(array('type' => $type));
+                $left = "type";
             } else if($modifyType == 1) { //edit post
                 $thread_id = $_POST["edit_thread_id"];
                 $post_id = $_POST["edit_post_id"];
@@ -186,12 +186,16 @@ class ForumController extends AbstractController {
                 if(!$this->core->getQueries()->editPost($post_id, $new_post_content)){
                     $this->core->addErrorMessage("There was an error trying to modify the post. Please try again.");
                 } $this->core->redirect($this->core->buildUrl(array('component' => 'forum', 'page' => 'view_thread', 'thread_id' => $thread_id)));
+                $left = "edit";
+                $type = "success";
             }
-            $response = array('type' => $type);
+            $response = array($left => $type);
             $this->core->getOutput()->renderJson($response);
             return $response;
         } else {
-            $this->core->addErrorMessage("You do not have permissions to do that.");
+            $response = array('error' => "You do not have permissions to do that.");
+            $this->core->getOutput()->renderJson($response);
+            return $response;
         }
     }
 
