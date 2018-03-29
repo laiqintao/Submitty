@@ -551,7 +551,7 @@ class ElectronicGraderController extends AbstractController {
             $user_ids_to_grade = $this->core->getQueries()->getPeerAssignment($gradeable->getId(), $this->core->getUser()->getId());
             $anon_id_map = $this->core->getQueries()->getAnonId($user_ids_to_grade);
             $total = $gradeable->getPeerGradeSet();
-            $graded = $this->core->getQueries()->getNumGradedPeerComponents($gradeable->getId(), $this->core->getUser()->getId()) / $gradeable->getNumPeerComponents();
+            $graded = $this->core->getQueries()->getNumGradedPeerComponents($gradeable->getId(), $this->core->getUser()->getId());
         }
         else if ($gradeable->isGradeByRegistration()) {
             $section_key = "registration_section";
@@ -581,7 +581,13 @@ class ElectronicGraderController extends AbstractController {
         }
 
         //multiplies users and the number of components a gradeable has together
-        $total = $total * count($gradeable->getComponents());
+
+        if($peer){
+            $total = $total * $gradeable->getNumPeerComponents();
+        }else {
+            $total = $total * count($gradeable->getComponents());
+        }
+
         if($total == 0) {
             $progress = 100;
         }

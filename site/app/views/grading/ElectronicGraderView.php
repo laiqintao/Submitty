@@ -3,6 +3,8 @@
 namespace app\views\grading;
 
 use app\models\Gradeable;
+use app\models\GradeableComponent;
+use app\models\GradeableComponentMark;
 use app\models\User;
 use app\models\LateDaysCalculation;
 use app\views\AbstractView;
@@ -627,18 +629,10 @@ HTML;
             }
             if($show_auto_grading_points) {
                 if ($highest_version != 0) {
-                    if($peer) {
                         $return .= <<<HTML
 
                 <td>{$autograding_score}&nbsp;/&nbsp;{$row->getTotalNonHiddenNonExtraCreditPoints()}</td>
 HTML;
-                    }
-                    else {
-                        $return .= <<<HTML
-
-                <td>{$autograding_score}&nbsp;/&nbsp;{$row->getTotalAutograderNonExtraCreditPoints()}</td>
-HTML;
-                    }
                 }
                 else {
                     $return .= <<<HTML
@@ -658,10 +652,16 @@ HTML;
                 }
                 else {
                     $score =0;
+                    /** @var $cmpts GradeableComponent */
                     foreach($peer_cmpts as $cmpts) {
                         //getScore is only the custom "mark" need to write a getTotalComponentScore and also make it clear or change name of Score
-                        $score += $cmpts->getScore();
+                        $toadd = $cmpts->getScore();
+                        if($toadd > $cmpts->getUpperClamp()){
+                            $toadd = $cmpts->getUpperClamp();
+                        }
+                        $score += $toadd;
                     }
+
                     $graded = $autograding_score + $score;
                     // instead of autograding_score it should be total autograding possible
                     // I don't think total_peer_grading_non_extra_credit ever gets set...it should be set in the gradeable constructor
@@ -1462,6 +1462,7 @@ HTML;
 
             $question_points = $question->getGradedTAPoints();
 
+
             if((!$question->getHasMarks() && !$question->getHasGrade()) || !$show_graded_info || !$peer_has_graded) {
                 $question_points = " ";
             }
@@ -1570,9 +1571,14 @@ HTML;
             $disabled = 'disabled';
         }
         $overallComment = htmlentities($gradeable->getOverallComment(), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $style="style='display:none'";
+
+        if(!$peer)
+            $style = "";
+
         $return .= <<<HTML
                 <tr>
-                    <td id="title-general" colspan="4" onclick="{$break_onclick} saveMark(-2,'{$gradeable->getId()}' ,'{$user->getAnonId()}', {$gradeable->getActiveVersion()}, {$question->getId()}, '{$your_user_id}'); openClose(-2, {$num_questions});">
+                    <td id="title-general" {$style} colspan="4" onclick="{$break_onclick} saveMark(-2,'{$gradeable->getId()}' ,'{$user->getAnonId()}', {$gradeable->getActiveVersion()}, {$question->getId()}, '{$your_user_id}'); openClose(-2, {$num_questions});">
                         <b>General Comment</b>
                         <div style="float: right;">
                             <span id="save-mark-general" style="cursor: pointer;  display: none;"> <i class="fa fa-check" style="color: green;" aria-hidden="true">Done</i> </span>
@@ -1582,7 +1588,7 @@ HTML;
                         <span id="cancel-mark-general" onclick="{$break_onclick} cancelMark(-3, '{$gradeable->getId()}', '{$user->getAnonId()}', {$question->getId()}); openClose(-1, {$num_questions});" style="cursor: pointer; display: none; float: right;"> <i class="fa fa-times" style="color: red;" aria-hidden="true">Cancel</i></span>
                     </td>
                 </tr>
-                <tr id="summary-general" style="" onclick="{$break_onclick} saveMark(-2,'{$gradeable->getId()}' ,'{$user->getAnonId()}', {$gradeable->getActiveVersion()}, '{$your_user_id}'); openClose(-2, {$num_questions});">
+                <tr id="summary-general" {$style} style="" onclick="{$break_onclick} saveMark(-2,'{$gradeable->getId()}' ,'{$user->getAnonId()}', {$gradeable->getActiveVersion()}, '{$your_user_id}'); openClose(-2, {$num_questions});">
                     <td style="white-space:nowrap; vertical-align:middle; text-align:center" colspan="1">
                     </td>
                     <td style="width:98%;" colspan="3">
@@ -1601,7 +1607,7 @@ HTML;
 HTML;
 
         if ($peer) {
-            $total_points = $gradeable->getTotalNonHiddenNonExtraCreditPoints() + $gradeable->getTotalPeerGradingNonExtraCredit();
+            $total_points = $gradeable->getTotalPeerGradingNonExtraCredit();
         }
         else {
             $total_points = $gradeable->getTotalAutograderNonExtraCreditPoints() + $gradeable->getTotalTANonExtraCreditPoints();
