@@ -426,6 +426,9 @@ class Gradeable extends AbstractModel {
                 if (!$component_for_info->getIsText()) {
                     $max_value = $component_for_info->getMaxValue();
                     $this->total_tagrading_non_extra_credit += $max_value;
+                    if($component_for_info->getIsPeer()){
+                        $this->total_peer_grading_non_extra_credit += $max_value;
+                    }
                 }
             }
             // We don't sort by order within the DB as we're aggregating the component details into an array so we'd

@@ -34,8 +34,10 @@ class MiscController extends AbstractController {
     private function unAnonymizePath($path){
         $newpath = $path;
 
-        //TODO: Is this efficient enough?
-        foreach($this->core->getQueries()->getPee() as $anon_id){
+        $anon_ids = $this->core->getQueries()->getAllAnonIds();
+        foreach($anon_ids as $anon_id_el){
+            $anon_id = $anon_id_el['anon_id'];
+
             if(strpos($path, $anon_id) === false)
                 continue;
 
