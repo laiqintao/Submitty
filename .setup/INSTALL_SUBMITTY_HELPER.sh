@@ -311,10 +311,10 @@ chmod 755 ${SUBMITTY_INSTALL_DIR}/bin
 rsync -rtz  ${SUBMITTY_REPOSITORY}/bin/*   ${SUBMITTY_INSTALL_DIR}/bin/
 
 #replace necessary variables in the copied scripts
-array=( authentication.py adduser.py create_course.sh generate_repos.py grade_item.py \
+array=( authentication.py adduser.py create_course.sh generate_repos.py grading/grade_item.py \
         submitty_autograding_shipper.py submitty_autograding_worker.py \
-        grade_items_logging.py grading_done.py regrade.py check_everything.py build_homework_function.sh setcsvfields \
-        setcsvfields.py get_version_details.py insert_database_version_data.py )
+        grading/grade_items_logging.py grading_done.py regrade.py check_everything.py build_homework_function.sh setcsvfields \
+        setcsvfields.py get_version_details.py grading/insert_database_version_data.py )
 for i in "${array[@]}"; do
     replace_fillin_variables ${SUBMITTY_INSTALL_DIR}/bin/${i}
 done
@@ -345,9 +345,9 @@ for i in "${array[@]}"; do
 done
 
 # hwcron only things
-array=( insert_database_version_data.py grade_item.py \
-        submitty_autograding_shipper.py submitty_autograding_worker.py grade_items_logging.py \
-        write_grade_history.py build_config_upload.py )
+array=( grading/insert_database_version_data.py grading/grade_item.py \
+        submitty_autograding_shipper.py submitty_autograding_worker.py grading/grade_items_logging.py \
+        grading/write_grade_history.py build_config_upload.py )
 for i in "${array[@]}"; do
     chown root:${HWCRON_USER} ${SUBMITTY_INSTALL_DIR}/bin/${i}
     chmod 550 ${SUBMITTY_INSTALL_DIR}/bin/${i}
@@ -542,7 +542,7 @@ popd
 chown -R ${HWCRON_USER}:${COURSE_BUILDERS_GROUP} ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools
 chmod -R 555 ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools
 
-#copying commonAST scripts 
+#copying commonAST scripts
 mkdir -p ${SUBMITTY_INSTALL_DIR}/clang-llvm/llvm/tools/clang/tools/extra/ASTMatcher/
 rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/astMatcher.py ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools
 rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/commonast.py ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools
@@ -793,7 +793,7 @@ if [ ${WORKER} == 0 ]; then
         # pass any additional command line arguments to the run test suite
         rainbow_total=$((rainbow_total+1))
         ${SUBMITTY_INSTALL_DIR}/test_suite/rainbowGrades/test_sample.py  "$@"
-        
+
         if [[ $? -ne 0 ]]; then
             echo -e "\n[ FAILED ] sample test\n"
         else
