@@ -5,8 +5,8 @@ import sys
 import time
 import signal
 import json
-import grade_items_logging
-import grade_item
+from grading import grade_items_logging
+from grading import grade_item
 import shutil
 import contextlib
 import datetime
@@ -284,7 +284,7 @@ def grade_queue_file(my_name, which_machine,which_untrusted,queue_file):
     grading_file = os.path.join(directory, "GRADING_" + name)
 
     #TODO: breach which_machine into id, address, and passphrase.
-    
+
     try:
         # prepare the job
         shipper_counter=0

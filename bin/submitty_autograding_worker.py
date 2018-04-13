@@ -6,8 +6,8 @@ import time
 import signal
 import shutil
 import json
-import grade_items_logging
-import grade_item
+from grading import grade_items_logging
+from grading import grade_item
 from submitty_utils import glob
 from submitty_utils import dateutils
 import multiprocessing
@@ -58,7 +58,7 @@ def worker_process(which_machine,address,which_untrusted,my_server):
                     queue_obj = json.load(infile)
                     queue_obj["done_time"]=dateutils.write_submitty_date(microseconds=True)
                 with open(done_queue_file, 'w') as outfile:
-                    json.dump(queue_obj, outfile, sort_keys=True, indent=4)        
+                    json.dump(queue_obj, outfile, sort_keys=True, indent=4)
             except Exception as e:
                 grade_items_logging.log_message(JOB_ID, message="ERROR attempting to unzip graded item: " + which_machine + " " + which_untrusted + " exception " + repr(e))
                 with contextlib.suppress(FileNotFoundError):
@@ -75,7 +75,7 @@ def worker_process(which_machine,address,which_untrusted,my_server):
             counter += 1
             time.sleep(1)
 
-                
+
 # ==================================================================================
 # ==================================================================================
 def launch_workers(my_name, my_stats):
