@@ -312,8 +312,8 @@ rsync -rtz  ${SUBMITTY_REPOSITORY}/bin/*   ${SUBMITTY_INSTALL_DIR}/bin/
 
 #replace necessary variables in the copied scripts
 array=( authentication.py adduser.py create_course.sh generate_repos.py grading/grade_item.py \
-        submitty_autograding_shipper.py submitty_autograding_worker.py \
-        grading/grade_items_logging.py grading_done.py regrade.py check_everything.py build_homework_function.sh setcsvfields \
+        submitty_autograding_shipper.py submitty_autograding_worker.py grading/grade_items_logging.py \
+        grading_done.py regrade.py check_everything.py build_homework_function.sh setcsvfields \
         setcsvfields.py get_version_details.py grading/insert_database_version_data.py )
 for i in "${array[@]}"; do
     replace_fillin_variables ${SUBMITTY_INSTALL_DIR}/bin/${i}
@@ -346,8 +346,9 @@ done
 
 # hwcron only things
 array=( grading/insert_database_version_data.py grading/grade_item.py \
-        submitty_autograding_shipper.py submitty_autograding_worker.py grading/grade_items_logging.py \
-        grading/write_grade_history.py build_config_upload.py )
+        submitty_autograding_shipper.py submitty_autograding_worker.py \
+        grading/grade_items_logging.py grading/write_grade_history.py \
+        build_config_upload.py )
 for i in "${array[@]}"; do
     chown root:${HWCRON_USER} ${SUBMITTY_INSTALL_DIR}/bin/${i}
     chmod 550 ${SUBMITTY_INSTALL_DIR}/bin/${i}
