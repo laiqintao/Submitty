@@ -15,6 +15,10 @@ mkdir -p ${GIT_PATH}/.vagrant/${DISTRO}/logs
 ${GIT_PATH}/.setup/vagrant/setup_vagrant.sh #{ENV['EXTRA']} 2>&1 | tee ${GIT_PATH}/.vagrant/${DISTRO}/logs/vagrant.log
 SCRIPT
 
+unless Vagrant.has_plugin?('vagrant-vbguest')
+  raise 'vagrant-vbguest is not installed!'
+end
+
 Vagrant.configure(2) do |config|
   # Specify the various machines that we might develop on. After defining a name, we
   # can specify if the vm is our "primary" one (if we don't specify a VM, it'll use
@@ -25,17 +29,18 @@ Vagrant.configure(2) do |config|
   config.vm.define 'ubuntu', primary: true do |ubuntu|
     ubuntu.vm.box = 'bento/ubuntu-16.04'
     ubuntu.vm.network 'forwarded_port', guest: 5432, host: 15432
-    ubuntu.vm.network 'private_network', ip: '192.168.56.101', auto_config: false
+    ubuntu.vm.network 'private_network', ip: '192.168.56.101'
+    ubuntu.vm.network 'private_network', ip: '192.168.56.102'
   end
 
   config.vm.define 'debian', autostart: false do |debian|
     debian.vm.box = 'bento/debian-8.8'
     debian.vm.network 'forwarded_port', guest: 5432, host: 25432
-    debian.vm.network 'private_network', ip: '192.168.56.102', auto_config: false
+    debian.vm.network 'private_network', ip: '192.168.56.201'
+    debian.vm.network 'private_network', ip: '192.168.56.202'
   end
 
   config.vm.provider 'virtualbox' do |vb|
-    #vb.gui = true
 
     vb.memory = 2048
     vb.cpus = 2
@@ -47,6 +52,8 @@ Vagrant.configure(2) do |config|
     # to be 10 seconds at most which should make things work generally ideally
     vb.customize ['guestproperty', 'set', :id, '/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold', 10000 ]
   end
+
+  config.vm.provision :shell, :inline => " sudo timedatectl set-timezone America/New_York", run: "once"
 
   config.vm.synced_folder '.', '/usr/local/submitty/GIT_CHECKOUT_Submitty', create: true, mount_options: ["dmode=775", "fmode=774"]
 
