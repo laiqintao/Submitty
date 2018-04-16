@@ -117,7 +117,7 @@ HTML;
                 $return .= <<<HTML
     <form id="submissionForm" method="post" style="text-align: center; margin: 0 auto; width: 100%; ">
         <div >
-            <input type='radio' id="radio_normal" name="submission_type" checked="true"> 
+            <input type='radio' id="radio_normal" name="submission_type" checked="true">
                 Normal Submission
             <input type='radio' id="radio_student" name="submission_type">
                 Make Submission for a Student
@@ -360,7 +360,7 @@ HTML;
                         break;
                     }
                 }
-                if ($student_page) {                
+                if ($student_page) {
                     $return .= <<<HTML
     <form id="pdfPageStudent">
         <div class="sub">
@@ -482,7 +482,7 @@ HTML;
                 submitSplitItem("{$this->core->getCsrfToken()}", "{$gradeable->getId()}", user_id, path, count);
                 moveNextInput(count);
             }
-            
+
             // otherwise, this is a regular submission of the uploaded files
             else if (user_id == "") {
                 handleSubmission({$late_days_use},
@@ -610,7 +610,7 @@ HTML;
                         $return .= <<<HTML
             <tr class="tr tr-vertically-centered">
                 <td>{$count}</td>
-                <td>{$clean_timestamp}</td> 
+                <td>{$clean_timestamp}</td>
                 <td>
                     {$filename_full}</br>
                     <object data="{$url}" type="application/pdf" width="100%" height="300">
@@ -659,7 +659,7 @@ HTML;
             var count = btn.parent().parent().index()+1;
             var name = "bulk_user_id_"+count;
             var user_ids = [];
-            $("input[id^='"+name+"']").each(function(){ user_ids.push(this.value); }); 
+            $("input[id^='"+name+"']").each(function(){ user_ids.push(this.value); });
             var js_count_array = $count_array_json;
             var path = decodeURIComponent(js_count_array[count]);
             if (id.includes("delete")) {
@@ -837,7 +837,7 @@ HTML;
                 if ($gradeable->hasIncentiveMessage()) {
                     $return .= <<<HTML
     <div class="sub" id="incentive_message" style="display: none;">
-        <p class='green-message'>{$gradeable->getIncentiveMessage()}</p>    
+        <p class='green-message'>{$gradeable->getIncentiveMessage()}</p>
     </div>
 HTML;
                 }
