@@ -1079,7 +1079,25 @@ class Gradeable extends AbstractModel {
     public function getSyllabusBucket() {
         return $this->bucket;
     }
-    
+
+    public function getComponentsPeerFirst(){
+        $comps = array();
+
+        foreach($this->components as $cmpt) {
+            if(is_array($cmpt) || $cmpt->getIsPeer()) {
+                array_push($comps, $cmpt);
+            }
+        }
+
+        foreach($this->components as $cmpt) {
+            if(!is_array($cmpt) && !$cmpt->getIsPeer()) {
+                array_push($comps, $cmpt);
+            }
+        }
+
+        return $comps;
+    }
+
     public function getNumPeerComponents() {
         $count = 0;
         foreach($this->components as $cmpt) {

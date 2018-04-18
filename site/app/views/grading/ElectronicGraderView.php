@@ -1333,7 +1333,24 @@ HTML;
         $your_user_id = $this->core->getUser()->getId();
         $peer_has_graded = false;
 
-        foreach ($gradeable->getComponents() as $component) {
+        if(!$peer && $gradeable->getPeerGrading()){
+            $return .= <<<HTML
+                <tr>
+                    <td id="title-peer" colspan="4">
+                        <b>Peer Components</b>
+                        <div style="float: right;">
+                            <select>
+                                <option value="0">Average</option>
+                                <option value="1">Student A</option>    
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+HTML;
+
+        }
+
+        foreach ($gradeable->getComponentsPeerFirst() as $component) {
             if($peer && !is_array($component)) continue;
             $question = null;
             $show_graded_info = true;
