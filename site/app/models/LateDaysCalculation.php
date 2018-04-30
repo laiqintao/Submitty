@@ -151,7 +151,15 @@ class LateDaysCalculation extends AbstractModel {
 
         return $all_latedays;
     }
-    
+
+    public function  calculateTeamLatedayUsage($team_id){
+        $team = $this->core->getQueries()->getTeamById($team_id);
+        foreach ($team->getMembers() as $member){
+            $this->students = $this->parseStudents($member);
+            //Calculate lateday usages for all students for all assignments queried
+            $this->all_latedays = $this->calculateStudentLatedayUsage($member);
+        }
+    }
      /**
      * For the given user id generate the late day usage HTML table.
      * @param $user_id String. The user id of the user whose table you want.
