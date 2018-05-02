@@ -1571,10 +1571,9 @@ HTML;
         $overallComment = htmlentities($gradeable->getOverallComment(), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $style="style='display:none'";
 
-        if(!$peer)
+        if(!$peer) {
             $style = "";
-
-        $return .= <<<HTML
+            $return .= <<<HTML
                 <tr>
                     <td id="title-general" {$style} colspan="4" onclick="{$break_onclick} openClose(-2, {$num_questions});">
                         <b>General Comment</b>
@@ -1603,6 +1602,8 @@ HTML;
                     </tr>
                 </tbody>
 HTML;
+
+        }
 
         if ($peer) {
             $total_points = $gradeable->getTotalPeerGradingNonExtraCredit();
