@@ -6,21 +6,17 @@ if [[ "$UID" -ne "0" ]] ; then
     exit
 fi
 
-apt-get install software-properties-common
+apt install software-properties-common
 echo "\n" | add-apt-repository ppa:webupd8team/java
 echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections
 apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys EEA14886
 
-apt-get update
-apt-get install -qqy python python-dev python3 python3-dev libpython3.5
+apt update
+apt install -qqy python python-dev python3 python3-dev libpython3.5
 if [ ! -x "$(command -v pip)" ]; then
     wget --tries=5 https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py
-    python2 /tmp/get-pip.py
     python3 /tmp/get-pip.py
     rm -f /tmp/get-pip.py
-else
-    pip2 install -U pip
-    pip3 install -U pip
 fi
 
 if [ ${VAGRANT} == 1 ]; then
@@ -93,7 +89,7 @@ fi
 # PACKAGE SETUP
 #################
 
-apt-get -qq update
+apt -qq update
 
 ############################
 # NTP: Network Time Protocol
@@ -108,24 +104,24 @@ apt-get -qq update
 # line that says “Specify one or more NTP servers” with something
 # along the lines of “server xxx.xxx.xxx.xxx”)
 
-apt-get install -qqy ntp
+apt install -qqy ntp
 service ntp restart
 
 echo "Preparing to install packages.  This may take a while."
 
-apt-get install -qqy libpam-passwdqc
+apt install -qqy libpam-passwdqc
 
 # Set up apache to run with suphp in pre-fork mode since not all
 # modules are thread safe (do not combine the commands or you may get
 # the worker/threaded mode instead)
 
-apt-get install -qqy ssh sshpass unzip
-apt-get install -qqy postgresql-9.5
-apt-get install -qqy apache2 apache2-suexec-custom libapache2-mod-authnz-external libapache2-mod-authz-unixgroup libapache2-mod-wsgi-py3 libapache2-mod-fastcgi
-apt-get install -qqy php7.0 php7.0-cli php7.0-fpm php7.0-curl php7.0-pgsql php7.0-mcrypt php7.0-zip
+apt install -qqy ssh sshpass unzip
+apt install -qqy postgresql-9.5
+apt install -qqy apache2 apache2-suexec-custom libapache2-mod-authnz-external libapache2-mod-authz-unixgroup libapache2-mod-wsgi-py3 libapache2-mod-fastcgi
+apt install -qqy php7.0 php7.0-cli php7.0-fpm php7.0-curl php7.0-pgsql php7.0-mcrypt php7.0-zip
 
 if [ ${VAGRANT} == 1 ]; then
-    apt-get install -qqy php-xdebug
+    apt install -qqy php-xdebug
 fi
 
 # Add additional packages for compiling, authentication, and security,
@@ -134,39 +130,33 @@ fi
 # DOCUMENTATION FIXME: Go through this list and categorize purpose of
 # these packages (as appropriate.. )
 
-apt-get install -qqy clang autoconf automake autotools-dev diffstat finger gdb git git-man \
-hardening-includes p7zip-full patchutils \
-libpq-dev unzip valgrind zip libmagic-ocaml-dev common-lisp-controller libboost-all-dev \
-javascript-common  \
-libfile-mmagic-perl libgnupg-interface-perl libbsd-resource-perl libarchive-zip-perl gcc g++ \
-g++-multilib jq libseccomp-dev libseccomp2 seccomp junit flex bison spim poppler-utils pdftk
+apt install -qqy clang autoconf automake autotools-dev diffstat finger gdb git git-man \
+hardening-includes p7zip-full patchutils libpq-dev unzip valgrind zip libmagic-ocaml-dev \
+common-lisp-controller libboost-all-dev javascript-common  libfile-mmagic-perl \
+libgnupg-interface-perl libbsd-resource-perl libarchive-zip-perl gcc g++ g++-multilib jq \
+libseccomp-dev libseccomp2 seccomp junit flex bison spim poppler-utils pdftk
 
-apt-get install -qqy ninja-build
+apt install -qqy ninja-build
 
 #CMAKE
 echo "installing cmake"
-apt-get install -qqy cmake
+apt install -qqy cmake
 
 # Install Oracle 8 Non-Interactively
 echo "installing java8"
-apt-get install -qqy oracle-java8-installer > /dev/null 2>&1
-apt-get install -qqy oracle-java8-set-default
+apt install -qqy oracle-java8-installer > /dev/null 2>&1
+apt install -qqy oracle-java8-set-default
 
 # Install Image Magick for image comparison, etc.
-apt-get install -qqy imagemagick
+apt install -qqy imagemagick
+
+# miscellaneous usability
+apt install -qqy emacs
 
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-apt-get update
-apt-get install -y docker-ce
+apt update
+apt install -y docker-ce
 systemctl status docker
 
-
-if [ ${VAGRANT} == 1 ]; then
-    apt-get install -qqy gitweb libcgi-session-perl
-fi
-
-apt-get -qqy autoremove
-
-# miscellaneous usability
-apt-get install -qqy emacs
+apt -qqy autoremove

@@ -20,8 +20,6 @@ sudo apt-get install -qqy clisp emacs
 # Used by Computer Science 1 Autograding
 echo "Getting pylint..."
 
-# install pylint for python3 using pip
-apt install -qqy python3-pip
 pip3 install pylint
 pip3 install pillow
 
