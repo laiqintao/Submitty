@@ -264,7 +264,7 @@ popd > /dev/null
 
 #Set up website if not in worker mode
 if [ ${WORKER} == 0 ]; then
-    a2enmod include actions cgi suexec authnz_external headers ssl fastcgi proxy_fcgi
+    a2enmod include actions cgi suexec authnz_external headers ssl proxy_fcgi
 
     # A real user will have to do these steps themselves for a non-vagrant setup as to do it in here would require
     # asking the user questions as well as searching the filesystem for certificates, etc.
@@ -292,7 +292,7 @@ if [ ${WORKER} == 0 ]; then
     	sed -i '26s/pam_unix.so obscure use_authtok try_first_pass sha512/pam_unix.so obscure minlen=1 sha512/' /etc/pam.d/common-password
     fi
 
-    cp ${SUBMITTY_REPOSITORY}/.setup/php${PHP_VERSION}-fpm/pool.d/submitty.conf /etc/php/${PHP_VERSION}/fpm/pool.d/submitty.conf
+    cp ${SUBMITTY_REPOSITORY}/.setup/php-fpm/pool.d/submitty.conf /etc/php/${PHP_VERSION}/fpm/pool.d/submitty.conf
     cp ${SUBMITTY_REPOSITORY}/.setup/apache/www-data /etc/apache2/suexec/www-data
     chmod 0640 /etc/apache2/suexec/www-data
 
@@ -350,15 +350,18 @@ if [ ${WORKER} == 0 ]; then
     # POSTGRES SETUP
     #################
     if [ ${VAGRANT} == 1 ]; then
-    	PG_VERSION="$(psql -V | egrep -o '[0-9]{1,}.[0-9]{1,}' | head -1)"
-    	cp /etc/postgresql/${PG_VERSION}/main/pg_hba.conf /etc/postgresql/${PG_VERSION}/main/pg_hba.conf.backup
-    	cp ${SUBMITTY_REPOSITORY}/.setup/vagrant/pg_hba.conf /etc/postgresql/${PG_VERSION}/main/pg_hba.conf
-    	echo "Creating PostgreSQL users"
-    	su postgres -c "source ${SUBMITTY_REPOSITORY}/.setup/vagrant/db_users.sh";
-    	echo "Finished creating PostgreSQL users"
+        PG_VERSION="$(psql -V | egrep -o '[0-9]{1,}.[0-9]{1,}' | head -1)"
+        if [ "${PG_VERSION:0:2}" == "10" ]; then
+            PG_VERSION="10"
+        fi
+        cp /etc/postgresql/${PG_VERSION}/main/pg_hba.conf /etc/postgresql/${PG_VERSION}/main/pg_hba.conf.backup
+        cp ${SUBMITTY_REPOSITORY}/.setup/vagrant/pg_hba.conf /etc/postgresql/${PG_VERSION}/main/pg_hba.conf
+        echo "Creating PostgreSQL users"
+        su postgres -c "source ${SUBMITTY_REPOSITORY}/.setup/vagrant/db_users.sh";
+        echo "Finished creating PostgreSQL users"
 
-    	sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" "/etc/postgresql/${PG_VERSION}/main/postgresql.conf"
-    	service postgresql restart
+        sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" "/etc/postgresql/${PG_VERSION}/main/postgresql.conf"
+        service postgresql restart
     fi
 
 
