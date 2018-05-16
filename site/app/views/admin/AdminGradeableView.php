@@ -361,6 +361,7 @@ HTML;
                 /> No 
                 <br /><br />
                 
+                <!--
                 <div id="rubric_questions" class="bool_val rubric_questions">
 
                 Will this assignment have peer grading?
