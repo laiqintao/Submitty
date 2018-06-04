@@ -17,7 +17,6 @@ if [ -z ${SUBMITTY_REPOSITORY+x} ]; then
     exit 1
 fi
 
-
 ########################################################################################################################
 ########################################################################################################################
 # this script must be run by root or sudo
@@ -121,6 +120,7 @@ if [[ "$#" -ge 1 && $1 == "clean" ]] ; then
     rm -rf ${SUBMITTY_INSTALL_DIR}/site
     rm -rf ${SUBMITTY_INSTALL_DIR}/src
     rm -rf ${SUBMITTY_INSTALL_DIR}/bin
+    rm -rf ${SUBMITTY_INSTALL_DIR}/sbin
     rm -rf ${SUBMITTY_INSTALL_DIR}/test_suite
     rm -rf ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools
 fi
@@ -203,6 +203,7 @@ if [ "${WORKER}" == 0 ]; then
     chmod  770                                      $SUBMITTY_DATA_DIR/to_be_built
 fi
 
+
 # tmp folder
 mkdir -p ${SUBMITTY_DATA_DIR}/tmp
 chown root:root ${SUBMITTY_DATA_DIR}/tmp
@@ -251,7 +252,7 @@ if [ $? -ne 0 ] ; then
     echo "ERROR BUILDING AUTOGRADING LIBRARY"
     exit 1
 fi
-popd
+popd > /dev/null
 
 # root will be owner & group of these files
 chown -R  root:root ${SUBMITTY_INSTALL_DIR}/src
@@ -306,66 +307,7 @@ popd > /dev/null
 ########################################################################################################################
 # COPY VARIOUS SCRIPTS USED BY INSTRUCTORS AND SYS ADMINS FOR COURSE ADMINISTRATION
 
-echo -e "Copy the scripts"
-
-# make the directory (has a different name)
-mkdir -p ${SUBMITTY_INSTALL_DIR}/bin
-
-chown root:${COURSE_BUILDERS_GROUP} ${SUBMITTY_INSTALL_DIR}/bin
-chmod 755 ${SUBMITTY_INSTALL_DIR}/bin
-
-# copy all of the files
-rsync -rtz  ${SUBMITTY_REPOSITORY}/bin/*   ${SUBMITTY_INSTALL_DIR}/bin/
-
-#replace necessary variables in the copied scripts
-array=( authentication.py adduser.py create_course.sh generate_repos.py grade_item.py \
-        submitty_autograding_shipper.py submitty_autograding_worker.py \
-        grade_items_logging.py grading_done.py regrade.py check_everything.py build_homework_function.sh setcsvfields \
-        setcsvfields.py get_version_details.py insert_database_version_data.py )
-for i in "${array[@]}"; do
-    replace_fillin_variables ${SUBMITTY_INSTALL_DIR}/bin/${i}
-done
-
-# most of the scripts should be root only
-find ${SUBMITTY_INSTALL_DIR}/bin -type f -exec chown root:root {} \;
-find ${SUBMITTY_INSTALL_DIR}/bin -type f -exec chmod 500 {} \;
-
-# www-data needs to have access to this so that it can authenticate for git
-chown root:www-data ${SUBMITTY_INSTALL_DIR}/bin/authentication.py
-chmod 550 ${SUBMITTY_INSTALL_DIR}/bin/authentication.py
-
-# all course builders (instructors & head TAs) need read/execute access to these scripts
-array=( regrade.py grading_done.py read_iclicker_ids.py left_right_parse.py)
-for i in "${array[@]}"; do
-    chown root:${COURSE_BUILDERS_GROUP} ${SUBMITTY_INSTALL_DIR}/bin/${i}
-    chmod 550 ${SUBMITTY_INSTALL_DIR}/bin/${i}
-done
-
-# everyone needs to run this script
-chmod 555 ${SUBMITTY_INSTALL_DIR}/bin/killall.py
-
-# course builders & hwcron need access to these scripts
-array=( build_homework_function.sh make_assignments_txt_file.py )
-for i in "${array[@]}"; do
-    chown ${HWCRON_USER}:${COURSE_BUILDERS_GROUP} ${SUBMITTY_INSTALL_DIR}/bin/${i}
-    chmod 550 ${SUBMITTY_INSTALL_DIR}/bin/${i}
-done
-
-# hwcron only things
-array=( insert_database_version_data.py grade_item.py \
-        submitty_autograding_shipper.py submitty_autograding_worker.py grade_items_logging.py \
-        write_grade_history.py build_config_upload.py )
-for i in "${array[@]}"; do
-    chown root:${HWCRON_USER} ${SUBMITTY_INSTALL_DIR}/bin/${i}
-    chmod 550 ${SUBMITTY_INSTALL_DIR}/bin/${i}
-done
-
-# root only things
-array=( untrusted_canary.py check_everything.py get_version_details.py )
-for i in "${array[@]}"; do
-    chown root:root ${SUBMITTY_INSTALL_DIR}/bin/${i}
-    chmod 500 ${SUBMITTY_INSTALL_DIR}/bin/${i}
-done
+source ${SUBMITTY_REPOSITORY}/.setup/INSTALL_SUBMITTY_HELPER_BIN.sh
 
 # build the helper program for strace output and restrictions by system call categories
 g++ ${SUBMITTY_INSTALL_DIR}/src/grading/system_call_check.cpp -o ${SUBMITTY_INSTALL_DIR}/bin/system_call_check.out
@@ -383,8 +325,11 @@ chmod 700 ${SUBMITTY_INSTALL_DIR}/.setup/bin
 
 cp  ${SUBMITTY_REPOSITORY}/.setup/bin/reupload_old_assignments.py   ${SUBMITTY_INSTALL_DIR}/.setup/bin/
 cp  ${SUBMITTY_REPOSITORY}/.setup/bin/reupload_generate_csv.py   ${SUBMITTY_INSTALL_DIR}/.setup/bin/
+cp  ${SUBMITTY_REPOSITORY}/.setup/bin/track_git_version.py   ${SUBMITTY_INSTALL_DIR}/.setup/bin/
 chown root:root ${SUBMITTY_INSTALL_DIR}/.setup/bin/reupload*
 chmod 700 ${SUBMITTY_INSTALL_DIR}/.setup/bin/reupload*
+chown root:root ${SUBMITTY_INSTALL_DIR}/.setup/bin/track_git_version.py
+chmod 700 ${SUBMITTY_INSTALL_DIR}/.setup/bin/track_git_version.py
 replace_fillin_variables ${SUBMITTY_INSTALL_DIR}/.setup/bin/reupload_old_assignments.py
 
 ########################################################################################################################
@@ -405,61 +350,19 @@ pushd ${SUBMITTY_INSTALL_DIR}/.setup/ > /dev/null
 chown root:root untrusted_execute.c
 chmod 500 untrusted_execute.c
 # compile the code
-g++ -static untrusted_execute.c -o ${SUBMITTY_INSTALL_DIR}/bin/untrusted_execute
+g++ -static untrusted_execute.c -o ${SUBMITTY_INSTALL_DIR}/sbin/untrusted_execute
 # change permissions & set suid: (must be root)
-chown root  ${SUBMITTY_INSTALL_DIR}/bin/untrusted_execute
-chgrp $HWCRON_USER  ${SUBMITTY_INSTALL_DIR}/bin/untrusted_execute
-chmod 4550  ${SUBMITTY_INSTALL_DIR}/bin/untrusted_execute
+chown root  ${SUBMITTY_INSTALL_DIR}/sbin/untrusted_execute
+chgrp $HWCRON_USER  ${SUBMITTY_INSTALL_DIR}/sbin/untrusted_execute
+chmod 4550  ${SUBMITTY_INSTALL_DIR}/sbin/untrusted_execute
 popd > /dev/null
 
 
 ################################################################################################################
 ################################################################################################################
 # COPY THE 1.0 Grading Website if not in worker mode
-if [ "${WORKER}" == 0 ]; then
-    echo -e "Copy the submission website"
-
-    # copy the website from the repo
-    rsync -rtz --exclude 'tests' ${SUBMITTY_REPOSITORY}/site   ${SUBMITTY_INSTALL_DIR}
-    
-    # install composer dependencies and generate classmap
-    pushd ${SUBMITTY_INSTALL_DIR}/site
-    composer install --no-dev --optimize-autoloader
-    popd
-
-    # set special user $HWPHP_USER as owner & group of all website files
-    find ${SUBMITTY_INSTALL_DIR}/site -exec chown $HWPHP_USER:$HWPHP_USER {} \;
-    find ${SUBMITTY_INSTALL_DIR}/site/cgi-bin -exec chown $HWCGI_USER:$HWCGI_USER {} \;
-
-    # TEMPORARY (until we have generalized code for generating charts in html)
-    # copy the zone chart images
-    mkdir -p ${SUBMITTY_INSTALL_DIR}/site/public/zone_images/
-    cp ${SUBMITTY_INSTALL_DIR}/zone_images/* ${SUBMITTY_INSTALL_DIR}/site/public/zone_images/ 2>/dev/null
-
-    # set the permissions of all files
-    # $HWPHP_USER can read & execute all directories and read all files
-    # "other" can cd into all subdirectories
-    chmod -R 440 ${SUBMITTY_INSTALL_DIR}/site
-    find ${SUBMITTY_INSTALL_DIR}/site -type d -exec chmod ogu+x {} \;
-
-    # "other" can read all of these files
-    array=( css otf jpg png ico txt )
-    for i in "${array[@]}"; do
-        find ${SUBMITTY_INSTALL_DIR}/site -type f -name \*.${i} -exec chmod o+r {} \;
-    done
-
-    # "other" can read & execute these files
-    find ${SUBMITTY_INSTALL_DIR}/site -type f -name \*.js -exec chmod o+rx {} \;
-    find ${SUBMITTY_INSTALL_DIR}/site -type f -name \*.cgi -exec chmod u+x {} \;
-
-    replace_fillin_variables ${SUBMITTY_INSTALL_DIR}/site/config/master_template.ini
-    mv ${SUBMITTY_INSTALL_DIR}/site/config/master_template.ini ${SUBMITTY_INSTALL_DIR}/site/config/master.ini
-
-    # return the course index page (only necessary when 'clean' option is used)
-    if [ -f "$mytempcurrentcourses" ]; then
-        echo "return this file! ${mytempcurrentcourses} ${originalcurrentcourses}"
-        mv ${mytempcurrentcourses} ${originalcurrentcourses}
-    fi
+if [ ${WORKER} == 0 ]; then
+    source ${SUBMITTY_REPOSITORY}/.setup/INSTALL_SUBMITTY_HELPER_SITE.sh
 fi
 
 ################################################################################################################
@@ -478,7 +381,7 @@ echo "# DO NOT EDIT -- THIS FILE CREATED AUTOMATICALLY BY INSTALL_SUBMITTY.sh"  
 
 ## NOTE:  the build_config_upload script is hardcoded to run for ~5 minutes and then exit
 minutes=0
-printf "*/5 * * * *   ${SUBMITTY_INSTALL_DIR}/bin/build_config_upload.py  >  /dev/null\n"  >> ${HWCRON_CRONTAB_FILE}
+printf "*/5 * * * *   ${SUBMITTY_INSTALL_DIR}/sbin/build_config_upload.py  >  /dev/null\n"  >> ${HWCRON_CRONTAB_FILE}
 
 echo "# DO NOT EDIT -- THIS FILE CREATED AUTOMATICALLY BY INSTALL_SUBMITTY.sh"                >> ${HWCRON_CRONTAB_FILE}
 echo -e "\n\n"                                                                                >> ${HWCRON_CRONTAB_FILE}
@@ -509,22 +412,28 @@ if [[ ! -f VERSION || $(< VERSION) != "${ST_VERSION}" ]]; then
 
     echo ${ST_VERSION} > VERSION
 fi
-popd
+popd > /dev/null
 #fi
 
 # change permissions
 chown -R ${HWCRON_USER}:${COURSE_BUILDERS_GROUP} ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools
 chmod -R 555 ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools
 
+# NOTE: These variables must match the same variables in install_system.sh
+clangsrc=${SUBMITTY_INSTALL_DIR}/clang-llvm/src
+clangbuild=${SUBMITTY_INSTALL_DIR}/clang-llvm/build
+# note, we are not running 'ninja install', so this path is unused.
+clanginstall=${SUBMITTY_INSTALL_DIR}/clang-llvm/install
+
 #copying commonAST scripts 
-mkdir -p ${SUBMITTY_INSTALL_DIR}/clang-llvm/llvm/tools/clang/tools/extra/ASTMatcher/
-mkdir -p ${SUBMITTY_INSTALL_DIR}/clang-llvm/llvm/tools/clang/tools/extra/UnionTool/
+mkdir -p ${clangsrc}/llvm/tools/clang/tools/extra/ASTMatcher/
+mkdir -p ${clangsrc}/llvm/tools/clang/tools/extra/UnionTool/
 rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/astMatcher.py ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools
 rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/commonast.py ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools
-rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/unionTool.cpp ${SUBMITTY_INSTALL_DIR}/clang-llvm/llvm/tools/clang/tools/extra/UnionTool/
-rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/CMakeLists.txt ${SUBMITTY_INSTALL_DIR}/clang-llvm/llvm/tools/clang/tools/extra/ASTMatcher/
-rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/ASTMatcher.cpp ${SUBMITTY_INSTALL_DIR}/clang-llvm/llvm/tools/clang/tools/extra/ASTMatcher/
-rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/CMakeListsUnion.txt ${SUBMITTY_INSTALL_DIR}/clang-llvm/llvm/tools/clang/tools/extra/UnionTool/CMakeLists.txt
+rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/unionTool.cpp ${clangsrc}/llvm/tools/clang/tools/extra/UnionTool/
+rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/CMakeLists.txt ${clangsrc}/llvm/tools/clang/tools/extra/ASTMatcher/
+rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/ASTMatcher.cpp ${clangsrc}/llvm/tools/clang/tools/extra/ASTMatcher/
+rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/CMakeListsUnion.txt ${clangsrc}/llvm/tools/clang/tools/extra/UnionTool/CMakeLists.txt
 rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/unionToolRunner.py ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools
 
 #copying tree visualization scrips
@@ -551,17 +460,21 @@ rsync -rtz ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools/commonAST/createAl
 pushd ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools
 g++ commonAST/parser.cpp commonAST/traversal.cpp -o ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools/commonASTCount.out
 g++ commonAST/parserUnion.cpp commonAST/traversalUnion.cpp -o ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools/unionCount.out
-popd
+popd > /dev/null
 
-#building clang ASTMatcher.cpp
-if [ -d ${SUBMITTY_INSTALL_DIR}/clang-llvm/build ]; then
-	pushd ${SUBMITTY_INSTALL_DIR}/clang-llvm/build
-	ninja
-	popd
-	chmod o+rx ${SUBMITTY_INSTALL_DIR}/clang-llvm/build/bin/ASTMatcher
-	chmod o+rx ${SUBMITTY_INSTALL_DIR}/clang-llvm/build/bin/UnionTool
-fi
+mkdir -p ${clanginstall}
 
+# building clang ASTMatcher.cpp
+pushd ${clangbuild}
+# TODO: this cmake only needs to be done the first time...  could optimize commands later if slow?
+cmake .
+ninja ASTMatcher UnionTool
+popd > /dev/null
+
+cp ${clangbuild}/bin/ASTMatcher ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools/
+cp ${clangbuild}/bin/UnionTool ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools/
+chmod o+rx ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools/ASTMatcher
+chmod o+rx ${SUBMITTY_INSTALL_DIR}/SubmittyAnalysisTools/UnionTool
 
 
 # change permissions
@@ -591,7 +504,7 @@ fi
 sudo chmod o+r /usr/local/lib/python*/dist-packages/submitty_utils*.egg
 sudo chmod o+r /usr/local/lib/python*/dist-packages/easy-install.pth
 
-popd
+popd > /dev/null
 
 
 
@@ -614,6 +527,8 @@ if [[ "$is_active_tmp" == "0" ]]; then
 fi
 
 
+
+
 #############################################################
 # stop the worker daemon (if it's running)
 systemctl is-active --quiet submitty_autograding_worker
@@ -628,8 +543,6 @@ if [[ "$is_active_tmp" == "0" ]]; then
     echo -e "ERROR: did not successfully stop submitty grading worker daemon\n"
     exit 1
 fi
-
-
 
 #############################################################
 # NOTE: This section is to cleanup the old scheduler -- and this code should eventually be removed
@@ -652,6 +565,13 @@ if [[ "$is_active_tmp" == "0" ]]; then
     exit 1
 fi
 # END TO BE DELETED
+
+if [ "${WORKER}" == 0 ]; then
+    # Stop all foreign worker daemons
+    echo -e "\nStopping worker machine daemons"
+    sudo -H -u ${HWCRON_USER} ${SUBMITTY_INSTALL_DIR}/sbin/shipper_utils/systemctl_wrapper.py stop --target perform_on_all_workers
+    echo -e "\n"
+fi
 
 
 #############################################################
@@ -712,6 +632,10 @@ do
     chmod 770 $mydir
 done
 
+#Obtains the current git hash and tag and stores them in the appropriate jsons.
+python3 ${SUBMITTY_INSTALL_DIR}/.setup/bin/track_git_version.py
+chmod o+r ${SUBMITTY_INSTALL_DIR}/config/version.json
+
 # If the submitty_autograding_shipper.service or submitty_autograding_worker.service
 # files have changed, we should reload the units:
 systemctl daemon-reload
@@ -726,6 +650,7 @@ if [[ "$is_shipper_active_before" == "0" ]]; then
     fi
     echo -e "Restarted Submitty Grading Shipper Daemon\n"
 else
+    is_worker_active_before="1"
     echo -e "NOTE: Submitty Grading Shipper Daemon is not currently running\n"
     echo -e "To start the daemon, run:\n   sudo systemctl start submitty_autograding_shipper\n"
 fi
@@ -806,5 +731,30 @@ if [ "${WORKER}" == 0 ]; then
         echo -e "\nCompleted Rainbow Grades Test Suite. $rainbow_counter of $rainbow_total tests succeeded.\n"
     fi
 fi
+
 ################################################################################################################
 ################################################################################################################
+# confirm permissions on the repository (to allow push updates from primary to worker)
+echo "Preparing to update Submitty installation on worker machines"
+if [ "${WORKER}" == 1 ]; then
+    # the supervisor user/group must have write access on the worker machine
+    chgrp -R ${SUBMITTY_SUPERVISOR} ${SUBMITTY_REPOSITORY}
+    chmod -R g+rw ${SUBMITTY_REPOSITORY}
+else
+    #FIXME: This takes a bit of time, should skip if there are no workers
+    # the hwcron user/group must have read access on the primary machine
+    chgrp -R ${HWCRON_GID} ${SUBMITTY_REPOSITORY}
+    chmod -R g+r ${SUBMITTY_REPOSITORY}
+fi
+
+# Update any foreign worker machines
+if [ "${WORKER}" == 0 ]; then
+    echo -e Updating worker machines
+    sudo -H -u ${HWCRON_USER} ${SUBMITTY_INSTALL_DIR}/sbin/shipper_utils/update_and_install_workers.py
+fi
+
+# set filemode to false, so that changes to file permissions in the
+# git repository will be ignored for future diffs/commits
+pushd ${SUBMITTY_REPOSITORY}
+git config --local core.filemode false
+popd > /dev/null

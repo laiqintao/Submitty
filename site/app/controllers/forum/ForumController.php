@@ -59,8 +59,18 @@ class ForumController extends AbstractController {
                 break;
             case 'add_category':
                 $this->addNewCategory();
+                break;
             case 'show_stats':
                 $this->showStats();
+                break;
+            case 'merge_thread':
+                $this->mergeThread();
+                break;
+            case 'pin_thread':
+                $this->pinThread(1);
+                break;
+            case 'unpin_thread':
+                $this->pinThread(0);
                 break;
             case 'view_thread':
             default:
@@ -84,6 +94,9 @@ class ForumController extends AbstractController {
 
 
     private function checkGoodAttachment($isThread, $thread_id, $file_post){
+        if($_FILES[$file_post]['error'][0] === UPLOAD_ERR_NO_FILE){
+            return 0;
+        }
         if(count($_FILES[$file_post]['tmp_name']) > 5) {
             $this->returnUserContentToPage("Max file upload size is 5. Please try again.", $isThread, $thread_id);
             return -1;
@@ -96,14 +109,12 @@ class ForumController extends AbstractController {
         } return $imageCheck;
     }
 
-    private function isValidCategory($inputCategoryId){
-        if($inputCategoryId < 1){
-            return false;
-        }
+    private function isValidCategory($inputCategoryId = -1, $inputCategoryName = ''){
         $rows = $this->core->getQueries()->getCategories();
         foreach($rows as $index => $values){
-            if($values["category_id"] === $inputCategoryId)
+            if($values["category_id"] === $inputCategoryId || $values["category_desc"] === $inputCategoryName) {
                 return true;
+            }
         }
         return false;
     }
@@ -113,10 +124,14 @@ class ForumController extends AbstractController {
         if($this->core->getUser()->getGroup() <= 2){
             if(!empty($_REQUEST["newCategory"])) {
                 $category = $_REQUEST["newCategory"];
-                $newCategoryId = $this->core->getQueries()->addNewCategory($category);
-                $result["new_id"] = $newCategoryId["category_id"];
+                if($this->isValidCategory(-1, $category)) {
+                    $result["error"] = "That category already exists.";
+                } else {
+                    $newCategoryId = $this->core->getQueries()->addNewCategory($category);
+                    $result["new_id"] = $newCategoryId["category_id"];
+                }
             } else {
-                $result["error"] = "No category data submitted";
+                $result["error"] = "No category data submitted. Please try again.";
             }
         } else {
             $result["error"] = "You do not have permissions to do that.";
@@ -183,9 +198,13 @@ class ForumController extends AbstractController {
         }
         $post_content = str_replace("\r", "", $_POST[$post_content_tag]);
         $thread_id = htmlentities($_POST["thread_id"], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $display_option = (!empty($_POST["display_option"])) ? htmlentities($_POST["display_option"], ENT_QUOTES | ENT_HTML5, 'UTF-8') : "tree";
         $anon = (isset($_POST["Anon"]) && $_POST["Anon"] == "Anon") ? 1 : 0;
         if(empty($post_content) || empty($thread_id)){
             $this->core->addErrorMessage("There was an error submitting your post. Please re-submit your post.");
+            $this->core->redirect($this->core->buildUrl(array('component' => 'forum', 'page' => 'view_thread')));
+        } else if(!$this->core->getQueries()->existsThread($thread_id)) {
+            $this->core->addErrorMessage("There was an error submitting your post. Thread doesn't exists.");
             $this->core->redirect($this->core->buildUrl(array('component' => 'forum', 'page' => 'view_thread')));
         } else {
             $hasGoodAttachment = $this->checkGoodAttachment(false, $thread_id, $file_post);
@@ -207,7 +226,7 @@ class ForumController extends AbstractController {
                     move_uploaded_file($_FILES[$file_post]["tmp_name"][$i], $target_file);
                 }
             }
-            $this->core->redirect($this->core->buildUrl(array('component' => 'forum', 'page' => 'view_thread', 'thread_id' => $thread_id)));
+            $this->core->redirect($this->core->buildUrl(array('component' => 'forum', 'page' => 'view_thread', 'option' => $display_option, 'thread_id' => $thread_id)));
         }
     }
 
@@ -218,6 +237,15 @@ class ForumController extends AbstractController {
         } else {
             $this->core->addErrorMessage("You do not have permissions to do that.");
         }
+    }
+
+    public function pinThread($type){
+        $thread_id = $_POST["thread_id"];
+        $current_user = $this->core->getUser()->getId();
+        $this->core->getQueries()->addPinnedThread($current_user, $thread_id, $type);
+        $response = array('user' => $current_user, 'thread' => $thread_id, 'type' => $type);
+        $this->core->getOutput()->renderJson($response);
+        return $response;
     }
 
     public function alterPost($modifyType){
@@ -250,6 +278,7 @@ class ForumController extends AbstractController {
     }
 
     private function getSortedThreads($category_id){
+        $current_user = $this->core->getUser()->getId();
         if($this->isValidCategory($category_id)) {
             $announce_threads = $this->core->getQueries()->loadAnnouncements($category_id);
             $reg_threads = $this->core->getQueries()->loadThreads($category_id);
@@ -257,14 +286,41 @@ class ForumController extends AbstractController {
             $announce_threads = $this->core->getQueries()->loadAnnouncementsWithoutCategory();
             $reg_threads = $this->core->getQueries()->loadThreadsWithoutCategory();
         }
-        return array_merge($announce_threads, $reg_threads);
+        $favorite_threads = $this->core->getQueries()->loadPinnedThreads($current_user);
+
+        $ordered_threads = array();
+        // Order : Favourite and Announcements => Announcements only => Favourite only => Others
+        foreach ($announce_threads as $thread) {
+            if(in_array($thread['id'], $favorite_threads)) {
+                $thread['favorite'] = true;
+                $ordered_threads[] = $thread;
+            }
+        }
+        foreach ($announce_threads as $thread) {
+            if(!in_array($thread['id'], $favorite_threads)) {
+                $ordered_threads[] = $thread;
+            }
+        }
+        foreach ($reg_threads as $thread) {
+            if(in_array($thread['id'], $favorite_threads)) {
+                $thread['favorite'] = true;
+                $ordered_threads[] = $thread;
+            }
+        }
+        foreach ($reg_threads as $thread) {
+            if(!in_array($thread['id'], $favorite_threads)) {
+                $ordered_threads[] = $thread;
+            }
+        }
+        return $ordered_threads;
     }
 
     public function getThreads(){
 
         $category_id = array_key_exists('thread_category', $_POST) && !empty($_POST["thread_category"]) ? (int)$_POST['thread_category'] : -1;
 
-        $threads = $this->getSortedThreads($category_id);
+        $max_thread = 0;
+        $threads = $this->getSortedThreads($category_id, $max_thread);
 
         $currentCategoryId = array_key_exists('currentCategoryId', $_POST) ? (int)$_POST["currentCategoryId"] : -1;
         $currentThreadId = array_key_exists('currentThreadId', $_POST) && !empty($_POST["currentThreadId"]) && is_numeric($_POST["currentThreadId"]) ? (int)$_POST["currentThreadId"] : -1;
@@ -282,20 +338,31 @@ class ForumController extends AbstractController {
 
         $category_id = in_array('thread_category', $_POST) ? $_POST['thread_category'] : -1;
 
-        $threads = $this->getSortedThreads($category_id);
+        $max_thread = 0;
+        $threads = $this->getSortedThreads($category_id, $max_thread);
 
         $current_user = $this->core->getUser()->getId();
 
         $posts = null;
-        if(isset($_REQUEST["thread_id"])){
-            $posts = $this->core->getQueries()->getPostsForThread($current_user, $_REQUEST["thread_id"]);
-        } else {
-            //We are at the "Home page"
-            //Show the first thread
-            $posts = $this->core->getQueries()->getPostsForThread($current_user, -1);
-
+        if(!isset($_REQUEST['option'])){
+            $_REQUEST['option'] = 'tree';
         }
-        $this->core->getOutput()->renderOutput('forum\ForumThread', 'showForumThreads', $user, $posts, $threads);
+        $option = ($this->core->getUser()->getGroup() <= 2 || $_REQUEST['option'] != 'alpha') ? $_REQUEST['option'] : 'tree';
+        if(!empty($_REQUEST["thread_id"])){
+            $thread_id = (int)$_REQUEST["thread_id"];
+            if($option == "alpha"){
+                $posts = $this->core->getQueries()->getPostsForThread($current_user, $thread_id, 'alpha');
+            } else {
+                $posts = $this->core->getQueries()->getPostsForThread($current_user, $thread_id, 'tree');
+            }
+            
+        } 
+
+        if(empty($_REQUEST["thread_id"]) || empty($posts)) {
+            $posts = $this->core->getQueries()->getPostsForThread($current_user, -1);
+        }
+        
+        $this->core->getOutput()->renderOutput('forum\ForumThread', 'showForumThreads', $user, $posts, $threads, $option, $max_thread);
     }
 
     public function showCreateThread(){
@@ -353,6 +420,39 @@ class ForumController extends AbstractController {
         }
         ksort($users);
         $this->core->getOutput()->renderOutput('forum\ForumThread', 'statPage', $users);
+    }
+
+    public function mergeThread(){
+        $parent_thread_id = $_POST["merge_thread_parent"];
+        $child_thread_id = $_POST["merge_thread_child"];
+        $thread_id = $child_thread_id;
+        if($this->core->getUser()->getGroup() <= 2){
+            if(is_numeric($parent_thread_id) && is_numeric($child_thread_id)) {
+                $message = "";
+                if($this->core->getQueries()->mergeThread($parent_thread_id, $child_thread_id, $message)) {
+                    $child_thread_dir = FileUtils::joinPaths(FileUtils::joinPaths($this->core->getConfig()->getCoursePath(), "forum_attachments"), $child_thread_id);
+                    if(is_dir($child_thread_dir)) {
+                        $parent_thread_dir = FileUtils::joinPaths(FileUtils::joinPaths($this->core->getConfig()->getCoursePath(), "forum_attachments"), $parent_thread_id);
+                        if(!is_dir($parent_thread_dir)) {
+                            FileUtils::createDir($parent_thread_dir);
+                        }
+                        $child_posts_dirs = FileUtils::getAllDirs($child_thread_dir);
+                        foreach ($child_posts_dirs as $post_id) {
+                            $child_post_dir = FileUtils::joinPaths($child_thread_dir, $post_id);
+                            $parent_post_dir = FileUtils::joinPaths($parent_thread_dir, $post_id);
+                            rename($child_post_dir, $parent_post_dir);
+                        }
+                    }
+                    $this->core->addSuccessMessage("Threads merged!");
+                    $thread_id = $parent_thread_id;
+                } else {
+                    $this->core->addErrorMessage("Merging Failed! ".$message);
+                }
+            }
+        } else {
+            $this->core->addErrorMessage("You do not have permissions to do that.");
+        }
+        $this->core->redirect($this->core->buildUrl(array('component' => 'forum', 'page' => 'view_thread', 'thread_id' => $thread_id)));
     }
 
 }

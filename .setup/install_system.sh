@@ -67,12 +67,6 @@ if [ ${VAGRANT} == 1 ]; then
 fi
 
 #################################################################
-# BUILD CLANG SETUP
-#################
-
-#python3 ${SUBMITTY_REPOSITORY}/.setup/clangInstall.py
-
-#################################################################
 # USERS SETUP
 #################
 
@@ -156,7 +150,7 @@ pip3 install tzlocal
 
 sudo chmod -R 555 /usr/local/lib/python*/*
 sudo chmod 555 /usr/lib/python*/dist-packages
-sudo chmod 500   /usr/local/lib/python*/dist-packages/pam.py*
+sudo chmod 500 /usr/local/lib/python*/dist-packages/pam.py*
 
 if [ ${WORKER} == 0 ]; then
     sudo chown hwcgi /usr/local/lib/python*/dist-packages/pam.py*
@@ -259,8 +253,9 @@ popd > /dev/null
 #Set up website if not in worker mode
 if [ ${WORKER} == 0 ]; then
     # install composer which is needed for the website
-    curl -sS https://getcomposer.org/installer -o composer-setup.php
-    php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+    curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
+    php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+    rm -f /tmp/composer-setup.php
 
     a2enmod include actions cgi suexec authnz_external headers ssl fastcgi
 
@@ -287,6 +282,21 @@ if [ ${WORKER} == 0 ]; then
 
         sed -i '25s/^/\#/' /etc/pam.d/common-password
     	sed -i '26s/pam_unix.so obscure use_authtok try_first_pass sha512/pam_unix.so obscure minlen=1 sha512/' /etc/pam.d/common-password
+
+        # Enable xdebug support for debugging
+        phpenmod xdebug
+
+        # In case you reprovision without wiping the drive, don't paste this twice
+        if [ -z $(grep 'xdebug\.remote_enable' /etc/php/7.0/cli/conf.d/20-xdebug.ini) ]
+        then
+            # Tell it to send requests to our host on port 9000 (PhpStorm default)
+            cat << EOF >> /etc/php/7.0/cli/conf.d/20-xdebug.ini
+[xdebug]
+xdebug.remote_enable=1
+xdebug.remote_port=9000
+xdebug.remote_host=10.0.2.2
+EOF
+        fi
     fi
 
     cp ${SUBMITTY_REPOSITORY}/.setup/php7.0-fpm/pool.d/submitty.conf /etc/php/7.0/fpm/pool.d/submitty.conf
@@ -369,13 +379,13 @@ if [ ${WORKER} == 0 ]; then
     if [ -d ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_Tutorial ]; then
         pushd ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_Tutorial
         git pull
-        popd
+        popd > /dev/null
     else
         git clone 'https://github.com/Submitty/Tutorial' ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_Tutorial
         pushd ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_Tutorial
         # remember to change this version in .setup/travis/autograder.sh too
         git checkout v0.94
-        popd
+        popd > /dev/null
     fi
 fi
 
@@ -386,12 +396,46 @@ fi
 if [ -d ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools ]; then
     pushd ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools
     git pull
-    popd
+    popd > /dev/null
 else
     git clone 'https://github.com/Submitty/AnalysisTools' ${SUBMITTY_INSTALL_DIR}/GIT_CHECKOUT_AnalysisTools
 fi
 
 
+#################################################################
+# BUILD CLANG SETUP
+#################
+
+# NOTE: These variables must match the same variables in INSTALL_SUBMITTY_HELPER.sh
+clangsrc=${SUBMITTY_INSTALL_DIR}/clang-llvm/src
+clangbuild=${SUBMITTY_INSTALL_DIR}/clang-llvm/build
+# note, we are not running 'ninja install', so this path is unused.
+clanginstall=${SUBMITTY_INSTALL_DIR}/clang-llvm/install
+ 
+# skip if this is a re-run
+if [ ! -d "${clangsrc}" ]; then
+    echo 'GOING TO PREPARE CLANG INSTALLATION FOR STATIC ANALYSIS'
+
+    mkdir -p ${clangsrc}
+
+    # checkout the clang sources
+    git clone --depth 1 http://llvm.org/git/llvm.git ${clangsrc}/llvm
+    git clone --depth 1 http://llvm.org/git/clang.git ${clangsrc}/llvm/tools/clang
+    git clone --depth 1 http://llvm.org/git/clang-tools-extra.git ${clangsrc}/llvm/tools/clang/tools/extra/
+
+    # initial cmake for llvm tools (might take a bit of time)
+    mkdir -p ${clangbuild}
+    pushd ${clangbuild}
+    cmake -G Ninja ../src/llvm -DCMAKE_INSTALL_PREFIX=${clanginstall} -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=X86 -DCMAKE_C_COMPILER=/usr/bin/clang-3.8 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-3.8
+    popd > /dev/null
+
+    # add build targets for our tools (src to be installed in INSTALL_SUBMITTY_HELPER.sh)
+    echo 'add_subdirectory(ASTMatcher)' >> ${clangsrc}/llvm/tools/clang/tools/extra/CMakeLists.txt
+    echo 'add_subdirectory(UnionTool)'  >> ${clangsrc}/llvm/tools/clang/tools/extra/CMakeLists.txt
+
+    echo 'DONE PREPARING CLANG INSTALLATION'
+fi
+    
 #################################################################
 # SUBMITTY SETUP
 #################
@@ -422,6 +466,19 @@ else
     fi
 fi
 
+if [ ${WORKER} == 1 ]; then
+   #Add the submitty user to /etc/sudoers if in worker mode.
+    SUBMITTY_SUPERVISOR=$(jq -r '.submitty_supervisor' ${SUBMITTY_INSTALL_DIR}/config/submitty_users.json)
+    if ! grep -q "${SUBMITTY_SUPERVISOR}" /etc/sudoers; then
+        echo "" >> /etc/sudoers
+        echo "#grant the submitty user on this worker machine access to install submitty" >> /etc/sudoers
+        echo "%${SUBMITTY_SUPERVISOR} ALL = (root) NOPASSWD: ${SUBMITTY_INSTALL_DIR}/.setup/INSTALL_SUBMITTY.sh" >> /etc/sudoers
+        echo "#grant the submitty user on this worker machine access to the systemctl wrapper" >> /etc/sudoers
+        echo "%${SUBMITTY_SUPERVISOR} ALL = (root) NOPASSWD: ${SUBMITTY_INSTALL_DIR}/sbin/shipper_utils/systemctl_wrapper.py" >> /etc/sudoers
+    fi
+fi
+
+
 echo Beginning Install Submitty Script
 source ${SUBMITTY_INSTALL_DIR}/.setup/INSTALL_SUBMITTY.sh clean
 
@@ -450,10 +507,19 @@ if [ ${WORKER} == 0 ]; then
 
     apache2ctl -t
 
-    hsdbu_password=`cat /usr/local/submitty/.setup/submitty_conf.json | jq .database_password | tr -d '"'`
+    hsdbu_password=`cat ${SUBMITTY_INSTALL_DIR}/.setup/submitty_conf.json | jq .database_password | tr -d '"'`
 
     PGPASSWORD=${hsdbu_password} psql -d postgres -h localhost -U hsdbu -c "CREATE DATABASE submitty"
     PGPASSWORD=${hsdbu_password} psql -d submitty -h localhost -U hsdbu -f ${SUBMITTY_REPOSITORY}/site/data/submitty_db.sql
+
+    if ! grep -q "${COURSE_BUILDERS_GROUP}" /etc/sudoers; then
+        echo "" >> /etc/sudoers
+        echo "#grant limited sudo access to members of the ${COURSE_BUILDERS_GROUP} group (instructors)" >> /etc/sudoers
+        echo "%${COURSE_BUILDERS_GROUP} ALL=(ALL:ALL) ${SUBMITTY_INSTALL_DIR}/bin/generate_repos.py" >> /etc/sudoers
+        echo "%${COURSE_BUILDERS_GROUP} ALL=(ALL:ALL) ${SUBMITTY_INSTALL_DIR}/bin/grading_done.py" >> /etc/sudoers
+        echo "%${COURSE_BUILDERS_GROUP} ALL=(ALL:ALL) ${SUBMITTY_INSTALL_DIR}/bin/regrade.py" >> /etc/sudoers
+    fi
+
 fi
 
 if [ ${WORKER} == 0 ]; then
@@ -468,16 +534,16 @@ if [ ${WORKER} == 0 ]; then
         mkdir -p ${SUBMITTY_REPOSITORY}/.vagrant/${DISTRO}/logs/submitty
         mkdir -p ${SUBMITTY_REPOSITORY}/.vagrant/${DISTRO}/logs/submitty/autograding
         ln -s ${SUBMITTY_REPOSITORY}/.vagrant/${DISTRO}/logs/submitty/autograding ${SUBMITTY_DATA_DIR}/logs/autograding
-        chown hwcron:course_builders ${SUBMITTY_DATA_DIR}/logs/autograding
+        chown hwcron:${COURSE_BUILDERS_GROUP} ${SUBMITTY_DATA_DIR}/logs/autograding
         chmod 770 ${SUBMITTY_DATA_DIR}/logs/autograding
 
         mkdir -p ${SUBMITTY_REPOSITORY}/.vagrant/${DISTRO}/logs/submitty/access
         mkdir -p ${SUBMITTY_REPOSITORY}/.vagrant/${DISTRO}/logs/submitty/site_errors
         ln -s ${SUBMITTY_REPOSITORY}/.vagrant/${DISTRO}/logs/submitty/access ${SUBMITTY_DATA_DIR}/logs/access
         ln -s ${SUBMITTY_REPOSITORY}/.vagrant/${DISTRO}/logs/submitty/site_errors ${SUBMITTY_DATA_DIR}/logs/site_errors
-        chown -R hwphp:course_builders ${SUBMITTY_DATA_DIR}/logs/access
+        chown -R hwphp:${COURSE_BUILDERS_GROUP} ${SUBMITTY_DATA_DIR}/logs/access
         chmod -R 770 ${SUBMITTY_DATA_DIR}/logs/access
-        chown -R hwphp:course_builders ${SUBMITTY_DATA_DIR}/logs/site_errors
+        chown -R hwphp:${COURSE_BUILDERS_GROUP} ${SUBMITTY_DATA_DIR}/logs/site_errors
         chmod -R 770 ${SUBMITTY_DATA_DIR}/logs/site_errors
 
         # Call helper script that makes the courses and refreshes the database
@@ -491,7 +557,7 @@ if [ ${WORKER} == 0 ]; then
 
         # Other Universities will need to rerun /bin/setcsvfields to match their
         # classlist csv data.  See wiki for details.
-        ${SUBMITTY_INSTALL_DIR}/bin/setcsvfields 13 12 15 7
+        ${SUBMITTY_INSTALL_DIR}/sbin/setcsvfields.py 13 12 15 7
     fi
 fi
 
@@ -513,7 +579,7 @@ fi
 
 # pushd /tmp/docker
 # su -c 'docker build -t ubuntu:custom -f Dockerfile .' hwcron
-# popd
+# popd > /dev/null
 
 
 #################################################################
