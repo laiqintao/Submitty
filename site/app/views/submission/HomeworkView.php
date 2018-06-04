@@ -85,7 +85,12 @@ HTML;
           $error = true;
           if ($info != "") { $info .= "<br><br>"; }
           $info .= "Your active version was submitted {$active_days_late} " . $this->dayOrDays($active_days_late) . " after the deadline,"
-            . " but you only have XXX remaining late days.  Your grade for this assignment will be recorded as a zero.";
+            . " but you ";
+          if ($late_days_remaining == 0) {
+            $info .= "have no remaining late days.";
+          } else {
+            $info .= "only have {$late_days_remaining} remaining late " . $this->dayOrDays($late_days_remaining) . ".";
+          }
         }
 
         // BAD STATUS - AUTO ZERO BECAUSE TOO MANY LATE DAYS USED ON THIS ASSIGNMENT
@@ -95,9 +100,9 @@ HTML;
           $info .= "Your active version was submitted {$active_days_late} " . $this->dayOrDays($active_days_late) . " after the deadline,";
           $info .= " and you would be charged {$active_days_charged} late " . $this->dayOrDays($active_days_charged) . " for this assignment,";
           if ($late_days_allowed == 0) {
-            $info.= " but your instructor specified that no late days may be used for this assignment.";
+            $info.= "<br>but your instructor specified that no late days may be used for this assignment.";
           } else {
-            $info.= " but your instructor specified that a maximum of {$late_days_allowed} late " . $this->dayOrDays($late_days_allowed) . " may be used for this assignment.";
+            $info.= "<br>but your instructor specified that a maximum of {$late_days_allowed} late " . $this->dayOrDays($late_days_allowed) . " may be used for this assignment.";
           }
         }
 
@@ -1191,11 +1196,12 @@ HTML;
 </div>
 HTML;
     }
-        if ($gradeable->taGradesReleased()) {
+        if ($gradeable->taGradesReleased() && $gradeable->useTAGrading() && $gradeable->getSubmissionCount() !== 0) {
+            // If the student does not submit anything, the only message will be "No submissions for this assignment."
             $return .= <<<HTML
 <div class="content">
 HTML;
-            if ($gradeable->hasGradeFile()) {
+            if ($gradeable->beenTAgraded()) {
                 $return .= <<<HTML
     <h3 class="label">TA / Instructor grade</h3>
 HTML;
@@ -1204,7 +1210,7 @@ HTML;
 HTML;
             } else {
                 $return .= <<<HTML
-    <h3 class="label">TA grade not available</h3>
+                    <h3 class="label">Your assignment has not been graded, contact your TA or instructor for more information</h3>
 HTML;
             }
             $return .= <<<HTML

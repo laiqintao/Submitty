@@ -114,7 +114,7 @@ class SubmissionController extends AbstractController {
                     }
                     $days_late = DateUtils::calculateDayDiff($gradeable->getDueDate());
                     $late_days_use = max(0, $days_late - $extensions);
-                    if ($gradeable->beenTAgraded() && $gradeable->hasGradeFile()) {
+                    if ($gradeable->taGradesReleased() && $gradeable->useTAGrading() && $gradeable->beenTAgraded()) {
                         $gradeable->updateUserViewedDate();
                     }
                     $canViewWholeGradeable = false;
@@ -1178,7 +1178,6 @@ class SubmissionController extends AbstractController {
         if (isset($_REQUEST['ta'])){
             $ta = $_REQUEST['ta'];
             $who = $_REQUEST['who'];
-            $individual = $_REQUEST['individual'];
             $mylist = new GradeableList($this->core, $this->core->getQueries()->getUserById($who));
             $gradeable_list = $mylist->getSubmittableElectronicGradeables();
         }
@@ -1285,8 +1284,7 @@ class SubmissionController extends AbstractController {
         if($ta) {
             $this->core->redirect($this->core->buildUrl(array('component' => 'grading', 'page' => 'electronic',
                                                     'action' => 'grade', 'gradeable_id' => $gradeable->getId(),
-                                                    'who_id'=>$who, 'individual'=>$individual,
-                                                          'gradeable_version' => $new_version)));
+                                                    'who_id'=>$who, 'gradeable_version' => $new_version)));
         }
         else {
             $this->core->redirect($this->core->buildUrl(array('component' => 'student',
