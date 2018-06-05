@@ -41,7 +41,18 @@ class LateController extends AbstractController {
 
     public function viewExtensions() {
         $g_ids = $this->core->getQueries()->getAllElectronicGradeablesIds();
-        $this->core->getOutput()->renderOutput(array('admin', 'Extensions'), 'displayExtensions', $g_ids);
+        $students = $this->core->getQueries()->getAllUsers();
+        $student_full = array();
+        foreach ($students as $student) {
+            $student_full[] = array('value' => $student->getId(),
+                'label' => $student->getDisplayedFirstName().' '.$student->getLastName().' <'.$student->getId().'>');
+        }
+        $student_full = json_encode($student_full);
+
+        $this->core->getOutput()->renderTwigOutput("admin/Extensions.twig", [
+            "gradeable_ids" => $g_ids,
+            "student_full" => $student_full
+        ]);
     }
 
     public function update($type, $delete) {
