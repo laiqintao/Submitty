@@ -78,7 +78,9 @@ class AuthenticationController extends AbstractController {
      * Display the login form to the user
      */
     public function loginForm() {
-        $this->core->getOutput()->renderOutput('Authentication', 'loginForm');
+        $this->core->getOutput()->renderTwigOutput('Authentication.twig', [
+            "old" => $_REQUEST['old'] ?? []
+        ]);
     }
     
     /**

@@ -74,18 +74,9 @@ class GlobalView extends AbstractView {
         ]);
      }
 
-    public function footer($runtime) {
-        return $this->core->getOutput()->renderTwigTemplate("GlobalFooter.twig", [
-            "runtime" => $runtime
-        ]);
-    }
-
     public function invalidPage($page) {
-        return <<<HTML
-<div class="box">
-The page {$page} does not exist. Please try again.
-</div>
-HTML;
-
+        return $this->core->getOutput()->renderTwigTemplate("InvalidPage", [
+            "page" => $page
+        ]);
     }
 }

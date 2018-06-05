@@ -196,7 +196,13 @@ class Output {
     }
 
     private function renderFooter() {
-        return ($this->use_footer) ? $this->renderTemplate('Global', 'footer', (microtime(true) - $this->start_time)) : "";
+        if ($this->use_footer) {
+            return $this->renderTwigTemplate('GlobalFooter.twig', [
+                "runtime" => (microtime(true) - $this->start_time)
+            ]);
+        } else {
+            return "";
+        }
     }
 
     public function bufferOutput() {
