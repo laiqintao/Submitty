@@ -36,7 +36,18 @@ class LateController extends AbstractController {
 
     public function viewLateDays() {
         $user_table = $this->core->getQueries()->getUsersWithLateDays();
-        $this->core->getOutput()->renderOutput(array('admin', 'LateDay'), 'displayLateDays', $user_table);
+        $students = $this->core->getQueries()->getAllUsers();
+        $student_full = array();
+        foreach ($students as $student) {
+            $student_full[] = array('value' => $student->getId(),
+                'label' => $student->getDisplayedFirstName().' '.$student->getLastName().' <'.$student->getId().'>');
+        }
+        $student_full = json_encode($student_full);
+
+        $this->core->getOutput()->renderTwigOutput("admin/LateDays.twig", [
+            "users" => $user_table,
+            "student_full" => $student_full
+        ]);
     }
 
     public function viewExtensions() {
