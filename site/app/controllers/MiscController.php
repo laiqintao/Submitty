@@ -193,10 +193,16 @@ class MiscController extends AbstractController {
         else {
             $contents = file_get_contents($corrected_name);
             if ($_REQUEST['ta_grading'] === "true") {
-                $this->core->getOutput()->renderOutput('Misc', 'displayCode', $mime_type, $corrected_name, $contents);
+                $this->core->getOutput()->renderTwigOutput("misc/Code.twig", [
+                    "filename" => $corrected_name,
+                    "file_contents" => $contents,
+                    "mime_type" => $mime_type,
+                ]);
             }
             else {
-                $this->core->getOutput()->renderOutput('Misc', 'displayFile', $contents);
+                $this->core->getOutput()->renderTwigOutput("misc/File.twig", [
+                    "file_contents" => $contents
+                ]);
             }
         }
     }
