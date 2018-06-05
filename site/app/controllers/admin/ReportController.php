@@ -37,7 +37,7 @@ class ReportController extends AbstractController {
     }
     
     public function showReportPage() {
-        $this->core->getOutput()->renderOutput(array('admin', 'Report'), 'showReportUpdates');
+        $this->core->getOutput()->renderTwigOutput("admin/Report.twig");
     }
     
     public function generateCSVReport() {
@@ -223,7 +223,7 @@ class ReportController extends AbstractController {
 
         file_put_contents(FileUtils::joinPaths($base_path, $current_user.'_summary.json'), FileUtils::encodeJson($user));
         $this->core->addSuccessMessage("Successfully Generated Grade Summaries");
-        $this->core->getOutput()->renderOutput(array('admin', 'Report'), 'showReportUpdates');
+        $this->core->getOutput()->renderTwigOutput("admin/Report.twig");
     }
 
     private function addLateDays(Gradeable $gradeable, &$entry, &$total_late_used) {
@@ -281,7 +281,7 @@ class ReportController extends AbstractController {
         $hw_report = new HWReport($this->core);
         $hw_report->generateAllReports();
         $this->core->addSuccessMessage("Successfully Generated HWReports");
-        $this->core->getOutput()->renderOutput(array('admin', 'Report'), 'showReportUpdates');
+        $this->core->getOutput()->renderTwigOutput("admin/Report.twig");
     }
 }
 
