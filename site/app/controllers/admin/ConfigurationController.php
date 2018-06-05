@@ -63,7 +63,7 @@ class ConfigurationController extends AbstractController {
             unset($_SESSION['request']);
         }
 
-        $this->core->getOutput()->renderOutput(array('admin', 'Configuration'), 'viewConfig', $fields);
+        $this->core->getOutput()->renderTwigOutput("admin/Configuration.twig", ["fields" => $fields]);
     }
 
     public function updateConfiguration() {
