@@ -55,11 +55,9 @@ HTML;
     }
 
     public function invalidPage($page) {
-        return <<<HTML
-<div>
-    The page you requested {$page} does not exist and cannot be used.
-</div>
-HTML;
+        return $this->core->getOutput()->renderTwigTemplate("InvalidPage.twig", [
+            "page" => $page
+        ]);
     }
 
     public function errorPage($error_message) {
