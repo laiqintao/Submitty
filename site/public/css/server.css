@@ -44,12 +44,17 @@ a:link,
 a.external,
 a.external:visited,
 a.external:link {
-    color: #000000;
+    color: blue;
+}
+
+a.btn,
+i {
+    color: black;
 }
 
 a:hover,
 a.external:hover {
-    color: #2627ee;
+    color: #3080ff;
 }
 
 /****************************
