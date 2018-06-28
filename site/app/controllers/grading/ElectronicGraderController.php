@@ -959,7 +959,7 @@ class ElectronicGraderController extends GradingController {
                 }
                 $found = false;
                 foreach($component as $peer) {
-                    if($peer->getGrader() === null) {
+                    if(!$peer->getHasMark()) {
                         $component = $peer;
                         $found = true;
                         break;
@@ -1033,7 +1033,7 @@ class ElectronicGraderController extends GradingController {
             } else {
                 //only change the component information is the mark was modified or componet and its gradeable are out of sync.
                 if($mark_modified === true || ($component->getGradedVersion() !== $gradeable->getActiveVersion())) {
-                    if ($component->getGrader() === null || $overwrite === "true") {
+                    if ((!$component->getHasMark()) || $overwrite === "true") {
                         $component->setGrader($this->core->getUser());
                     }
 
@@ -1182,7 +1182,7 @@ class ElectronicGraderController extends GradingController {
                     continue;
                 }
                 foreach($question as $cmpt) {
-                    if($cmpt->getGrader() == null) {
+                    if(!$cmpt->getHasMark()) {
                         $component = $cmpt;
                         break;
                     }

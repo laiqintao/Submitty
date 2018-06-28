@@ -57,7 +57,7 @@ class ReportController extends AbstractController {
                 $max = $max + $gradeable->getTotalAutograderNonExtraCreditPoints();
               }
               if ($use_ta_grading) {
-                $max = $max + $gradeable->getTotalTANonExtraCreditPoints();
+                $max = $max + $gradeable->getTotalTAMax();
               }
               $results['header_model'][$g_id] = $g_id.": ".$max;
             }

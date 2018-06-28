@@ -538,7 +538,7 @@ HTML;
         //get total score and max possible score
         $score = $gradeable->getGradedTAPoints();
         $totalInstructorPointsEarned = $score;
-        $maxScore = $gradeable->getTotalTANonExtraCreditPoints();
+        $maxScore = $gradeable->getTotalTAMax();
         if($score >= $maxScore){
             $background = "green-background";
         }else if($score >  $maxScore* 0.5){
