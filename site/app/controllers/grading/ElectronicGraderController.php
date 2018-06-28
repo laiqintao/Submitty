@@ -64,6 +64,20 @@ class ElectronicGraderController extends GradingController {
                 break;
         }
     }
+    private function checkPermissions(){
+        $peer = false;
+        if ($this->core->getUser()->getGroup() > $gradeable->getMinimumGradingGroup()) {
+            if($gradeable->getPeerGrading() && $this->core->getUser()->getGroup()==4) {
+                $peer = true;
+            }
+            else {
+                $this->core->addErrorMessage("You do not have permission to grade {$gradeable->getName()}");
+                $this->core->redirect($this->core->getConfig()->getSiteUrl());
+                return false;
+            }
+        }
+        return $peer;
+    }
     private function verifyGrader($verifyAll = false){
 
         //check that I am able to verify.
@@ -111,17 +125,7 @@ class ElectronicGraderController extends GradingController {
         $gradeable = $this->core->getQueries()->getGradeable($gradeable_id);
         $gradeableUrl = $this->core->buildUrl(array('component' => 'grading', 'page' => 'electronic', 'gradeable_id' => $gradeable_id));
         $this->core->getOutput()->addBreadcrumb("{$gradeable->getName()} Grading", $gradeableUrl);
-        $peer = false;
-        if ($this->core->getUser()->getGroup() > $gradeable->getMinimumGradingGroup()) {
-            if ($gradeable->getPeerGrading() && ($this->core->getUser()->getGroup() == 4)) {
-                $peer = true;
-            }
-            else {
-                $this->core->addErrorMessage("You do not have permission to grade {$gradeable->getName()}");
-                $this->core->redirect($this->core->getConfig()->getSiteUrl());
-            }
-        }
-
+        $peer = checkPermissions();
         /*
          * we need number of students per section
          */
