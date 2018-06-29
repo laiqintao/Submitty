@@ -16,6 +16,7 @@ use app\models\gradeable\GradedComponent;
 use app\models\gradeable\GradedGradeable;
 use app\models\gradeable\Mark;
 use app\models\gradeable\Submitter;
+use app\models\gradeable\TaGradedGradeable;
 use app\models\GradeableComponent;
 use app\models\GradeableComponentMark;
 use app\models\GradeableVersion;
@@ -2887,5 +2888,193 @@ AND gc_id IN (
 
         // Also make sure to update components
         $this->updateGradeableComponents($gradeable);
+    }
+
+
+    /**
+     * Removes the provided mark ids from the marks assigned to a graded component
+     * @param int $gradeable_data_id The id of the graded gradeable that $graded_component belongs to
+     * @param GradedComponent $graded_component
+     * @param int[] $mark_ids
+     */
+    private function deleteGradedComponentMarks($gradeable_data_id, GradedComponent $graded_component, $mark_ids) {
+        $param = array_merge([
+            $gradeable_data_id,
+            $graded_component->getComponentId(),
+            $graded_component->getGraderId(),
+        ], $mark_ids);
+        $place_holders = implode(',', array_fill(0, count($mark_ids), '?'));
+        $this->course_db->query("
+            DELETE FROM gradeable_component_mark_data
+            WHERE gd_id=? AND gc_id=? AND gcd_grader_id=? AND gcm_id IN ($place_holders)",
+            $param);
+    }
+
+    /**
+     * Adds the provided mark ids as marks assigned to a graded component
+     * @param int $gradeable_data_id The id of the graded gradeable that $graded_component belongs to
+     * @param GradedComponent $graded_component
+     * @param int[] $mark_ids
+     */
+    private function createGradedComponentMarks($gradeable_data_id, GradedComponent $graded_component, $mark_ids) {
+        $param = [
+            $gradeable_data_id,
+            $graded_component->getComponentId(),
+            $graded_component->getGraderId(),
+            -1
+        ];
+        $query = "
+            INSERT INTO gradeable_component_mark_data(
+              gd_id, 
+              gc_id, 
+              gcd_grader_id, 
+              gcm-id)
+            VALUES (?, ?, ?, ?)";
+
+        foreach($mark_ids as $mark_id) {
+            $param[3] = $mark_id;
+            $this->course_db->query($query, $param);
+        }
+    }
+
+    /**
+     * Creates a new graded component in the database
+     * @param int $gradeable_data_id The id of the graded gradeable that $graded_component belongs to
+     * @param GradedComponent $graded_component
+     */
+    private function createGradedComponent($gradeable_data_id, GradedComponent $graded_component) {
+        $param = [
+            $graded_component->getComponentId(),
+            $gradeable_data_id,
+            $graded_component->getScore(),
+            $graded_component->getGraderId(),
+            $graded_component->getGradedVersion(),
+            $graded_component->getGradeTime()
+        ];
+        $query = "
+            INSERT INTO gradeable_component_data(
+              gc_id,
+              gd_id,
+              gcd_score,
+              gcd_component_comment,
+              gcd_grader_id,
+              gcd_graded_version,
+              gcd_grade_time)
+            VALUES(?, ?, ?, ?, ?, ?, ?)";
+        $this->course_db->query($query, $param);
+    }
+
+    /**
+     * Updates an existing graded component in the database
+     * @param int $gradeable_data_id The id of the graded gradeable that $graded_component belongs to
+     * @param GradedComponent $component
+     */
+    private function updateGradedComponent($gradeable_data_id, GradedComponent $component) {
+        if($component->isModified()) {
+            $params = [
+                $component->getScore(),
+                $component->getComment(),
+                $component->getGradedVersion(),
+                $component->getGradeTime(),
+                $gradeable_data_id,
+                $component->getComponentId(),
+                $component->getGraderId()
+            ];
+            $query = "
+                UPDATE gradeable_component_data SET 
+                  gcd_score=?,
+                  gcd_component_comment=?,
+                  gcd_graded_version=?,
+                  gcd_grade_time=?
+                WHERE gd_id=? AND gc_id=? AND gcd_grader_id=?";
+            $this->course_db->query($query, $params);
+        }
+    }
+
+    /**
+     * Update/create the components/marks for a gradeable
+     * @param TaGradedGradeable $ta_graded_gradeable
+     */
+    private function updateGradedComponents(TaGradedGradeable $ta_graded_gradeable) {
+        // iterate through graded components and see if any need updating/creating
+        /** @var GradedComponent[] $component_grades */
+        foreach ($ta_graded_gradeable->getGradedComponents() as $component_grades) {
+            foreach ($component_grades as $component_grade) {
+                // This means the component wasn't loaded from the database, ergo its new
+                if ($component_grade->getDbMarkIds() === null) {
+                    $this->createGradedComponent($ta_graded_gradeable->getId(), $component_grade);
+                } else {
+                    $this->updateGradedComponent($ta_graded_gradeable->getId(), $component_grade);
+                }
+
+                // If the marks have been modified, this means we need to update the entries
+                if ($component_grade->isMarksModified()) {
+                    $new_marks = array_diff($component_grade->getMarkIds(), $component_grade->getDbMarkIds());
+                    $deleted_marks = array_diff($component_grade->getDbMarkIds(), $component_grade->getMarkIds());
+                    $this->deleteGradedComponentMarks(
+                        $ta_graded_gradeable->getId(),
+                        $component_grade->getComponentId(),
+                        $component_grade->getGraderId(),
+                        $deleted_marks);
+                    $this->createGradedComponentMarks(
+                        $ta_graded_gradeable->getId(),
+                        $component_grade->getComponentId(),
+                        $component_grade->getGraderId(),
+                        $new_marks);
+                }
+            }
+        }
+    }
+
+    /**
+     * Creates a new Ta Grade in the database along with its graded components/marks
+     * @param TaGradedGradeable $ta_graded_gradeable
+     */
+    public function createTaGradedGradeable(TaGradedGradeable $ta_graded_gradeable) {
+        $submitter_id = $ta_graded_gradeable->getGradedGradeable()->getSubmitter()->getId();
+        $is_team = $ta_graded_gradeable->getGradedGradeable()->getSubmitter()->isTeam();
+        $params = [
+            $ta_graded_gradeable->getGradedGradeable()->getGradeable()->getId(),
+            $is_team ? null : $submitter_id,
+            $is_team ? $submitter_id : null,
+            $ta_graded_gradeable->getOverallComment(),
+            $ta_graded_gradeable->getUserViewedDate()
+        ];
+        $query = "
+            INSERT INTO electronic_gradeable(
+                g_id,
+                gd_user_id,
+                gd_team_id,
+                gd_overall_comment,
+                gd_user_viewed_date)
+            VALUES(?, ?, ?, ?, ?)";
+        $this->course_db->query($query, $params);
+
+        // Also be sure to save the components
+        $this->updateGradedComponents($ta_graded_gradeable);
+    }
+
+    /**
+     * Updates an existing Ta Grade in the database along with its graded components/marks
+     * @param TaGradedGradeable $ta_graded_gradeable
+     */
+    public function updateTaGradedGradeable(TaGradedGradeable $ta_graded_gradeable) {
+        // If the grade has been modified, then update its properties
+        if ($ta_graded_gradeable->isModified()) {
+            $params = [
+                $ta_graded_gradeable->getOverallComment(),
+                $ta_graded_gradeable->getUserViewedDate(),
+                $ta_graded_gradeable->getId()
+            ];
+            $query = "
+                UPDATE gradeable_data SET 
+                  gd_overall_comment=?,
+                  gd_user_viewed_date=?
+                WHERE gd_id=?";
+            $this->course_db->query($query, $params);
+        }
+
+        // Also be sure to save the components
+        $this->updateGradedComponents($ta_graded_gradeable);
     }
 }
