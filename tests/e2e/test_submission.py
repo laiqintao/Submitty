@@ -9,6 +9,7 @@ import os
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
+
 class TestSubmission(BaseTestCase):
     def __init__(self, testname):
         super().__init__(testname, log_in=False)
@@ -79,7 +80,7 @@ class TestSubmission(BaseTestCase):
         self.assertEqual(0, len(file_names))
         # wait for the autograding results to finish
         if autograding:
-            WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.XPATH, "//div[@id='container']/div[@class='content']/div[@class='sub'][3]/div[@class='box' and div/@class='box-title']")))
+            WebDriverWait(self.driver, 60).until(EC.presence_of_element_located((By.XPATH, "//div[@id='container']/div[@class='content']/div[@class='sub']/div[@class='box' and div/@class='box-title']")))
     
     def change_submission_version(self):
         # find the version selection dropdown and click
