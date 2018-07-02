@@ -135,13 +135,15 @@ class GradedComponent extends AbstractModel {
         // This may seem redundant, but by fetching the marks from the component and calling setMarks, we
         //  effectively filter out any of the invalid values in $mark_ids
         $marks = [];
+        $actual_ids =[];
         foreach ($this->component->getMarks() as $mark) {
             if (in_array($mark->getId(), $mark_ids)) {
-                $mark_objects[] = $mark;
+                $marks[] = $mark;
+                $actual_ids[] = $mark->getId();
             }
         }
         $this->marks = $marks;
-        $this->mark_ids = $mark_ids;
+        $this->mark_ids = $actual_ids;
         $this->marks_modified = true;
     }
 
