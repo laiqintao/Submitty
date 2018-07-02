@@ -21,7 +21,7 @@ use app\models\AbstractModel;
  * @method void setOverallComment($comment)
  * @method int getId()
  * @method \DateTime|null getUserViewedDate()
- * @method array getGradedComponents()
+ * @method array[] getGradedComponents()
  */
 class TaGradedGradeable extends AbstractModel {
     /** @property @var GradedGradeable A reference to the graded gradeable this Ta grade belongs to */
@@ -32,7 +32,7 @@ class TaGradedGradeable extends AbstractModel {
     protected $overall_comment = "";
     /** @property @var \DateTime|null The date the user viewed their grade */
     protected $user_viewed_date = null;
-    /** @property @var GradedComponent[][] The an array of arrays of GradedComponents, indexed by component id */
+    /** @property @var array[] The an array of arrays of GradedComponents, indexed by component id */
     protected $graded_components = array();
 
 
@@ -51,9 +51,9 @@ class TaGradedGradeable extends AbstractModel {
         }
         $this->graded_gradeable = $graded_gradeable;
 
-        $this->setIdInternal($details['id']);
-        $this->setOverallComment($details['overall_comment']);
-        $this->setUserViewedDate($details['user_viewed_date']);
+        $this->setIdFromDatabase($details['id'] ?? -1);
+        $this->setOverallComment($details['overall_comment'] ?? '');
+        $this->setUserViewedDate($details['user_viewed_date'] ?? null);
         $this->modified = false;
     }
 
@@ -67,6 +67,7 @@ class TaGradedGradeable extends AbstractModel {
         //  the graded gradeable instead of each component so if one grader  grades
         //  multiple components, their information only gets sent once
         $details['graders'] = [];
+        /** @var GradedComponent[] $graded_components */
         foreach ($this->graded_components as $graded_components) {
             foreach($graded_components as $graded_component) {
                 if ($graded_component->getGrader() !== null) {
@@ -172,20 +173,23 @@ class TaGradedGradeable extends AbstractModel {
     }
 
     /**
-     * Sets the id of this grade data
+     * Sets the id of this grade data (used from database methods)
      * @param int $id
+     * @internal
      */
-    private function setIdInternal($id) {
+    public function setIdFromDatabase($id) {
         if ((is_int($id) || ctype_digit($id)) && intval($id) >= 0) {
             $this->id = intval($id);
         } else {
             throw new \InvalidArgumentException('Id must be a non-negative integer');
         }
+        // Reset the modified flag since this gets called once saved to db or constructor
+        $this->modified = false;
     }
 
     /**
      * Sets the array of graded components for this gradeable data
-     * @param GradedComponent[][]|GradedComponent[] $graded_components
+     * @param array[]|GradedComponent[] $graded_components
      */
     public function setGradedComponents(array $graded_components) {
 
@@ -209,11 +213,7 @@ class TaGradedGradeable extends AbstractModel {
                 }
 
             // Index by component id
-            if(isset($graded_components_by_id[$graded_component->getComponentId()])) {
-                $graded_components_by_id[$graded_component->getComponentId()][] = $graded_component;
-            } else {
-                $graded_components_by_id[$graded_component->getComponentId()] = [$graded_component];
-            }
+            $graded_components_by_id[$graded_component->getComponentId()][] = $graded_component;
         }
         $this->graded_components = $graded_components_by_id;
     }

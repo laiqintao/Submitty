@@ -69,15 +69,18 @@ class GradedComponent extends AbstractModel {
         $this->setComponent($component);
         $this->setGrader($grader);
 
-        $this->setComment($details['comment']);
-        $this->setGradedVersion($details['graded_version']);
-        $this->setGradeTime($details['grade_time']);
+        $this->setComment($details['comment'] ?? '');
+        $this->setGradedVersion($details['graded_version'] ?? 0);
+        $this->setGradeTime($details['grade_time'] ?? null);
 
-        // Make sure the loaded score overrides the calculated
-        //  score if it exists / there aren't any marks
-        if (isset($details['score'])) {
-            $this->setScore($details['score']);
+        // assign the default score if its not electronic (or rather not a custom mark)
+        if($component->getGradeable()->getType() === GradeableType::ELECTRONIC_FILE){
+            $score = $details['score'] ?? 0;
+        } else {
+            $score = $details['score'] ?? $component->getDefault();
         }
+        $this->setScore($score);
+
         $this->modified = false;
     }
 
@@ -188,12 +191,12 @@ class GradedComponent extends AbstractModel {
      * @param float $score
      */
     public function setScore($score) {
-        if($this->component->getGradeable()->getType() !== GradeableType::ELECTRONIC_FILE) {
+        if($this->component->getGradeable()->getType() === GradeableType::ELECTRONIC_FILE) {
+            $this->score = $score;
+        } else {
             // clamp the score (no error if not in bounds)
             //  min(max(a,b),c) will clamp the value 'b' in the range [a,c]
             $this->score = min(max($this->component->getLowerClamp(), $score), $this->component->getUpperClamp());
-        } else {
-            $this->score = $score;
         }
         $this->score = $this->getComponent()->getGradeable()->roundPointValue($this->score);
         $this->modified = true;
