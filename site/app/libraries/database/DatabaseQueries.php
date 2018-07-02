@@ -3085,4 +3085,8 @@ AND gc_id IN (
         // Also be sure to save the components
         $this->updateGradedComponents($ta_graded_gradeable);
     }
+
+    public function deleteTaGradedGradeable(TaGradedGradeable $ta_graded_gradeable) {
+        $this->course_db->query("DELETE FROM gradeable_data WHERE gd_id=?", [$ta_graded_gradeable->getId()]);
+    }
 }
