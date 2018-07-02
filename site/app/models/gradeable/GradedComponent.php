@@ -2,6 +2,7 @@
 
 namespace app\models\gradeable;
 
+use app\libraries\GradeableType;
 use app\models\AbstractModel;
 use app\libraries\Core;
 use app\libraries\DateUtils;
@@ -183,14 +184,18 @@ class GradedComponent extends AbstractModel {
     }
 
     /**
-     * Sets the score the submitter received for this component, clamped to be
-     *  between the lower and upper clamp of the associated component
+     * Sets the score the submitter received for this component--clamped or custom mark--not clamped
      * @param float $score
      */
     public function setScore($score) {
-        // clamp the score (no error if not in bounds)
-        //  min(max(a,b),c) will clamp the value 'b' in the range [a,c]
-        $this->score = min(max($this->component->getLowerClamp(), $score), $this->component->getUpperClamp());
+        if($this->component->getGradeable()->getType() !== GradeableType::ELECTRONIC_FILE) {
+            // clamp the score (no error if not in bounds)
+            //  min(max(a,b),c) will clamp the value 'b' in the range [a,c]
+            $this->score = min(max($this->component->getLowerClamp(), $score), $this->component->getUpperClamp());
+        } else {
+            $this->score = $score;
+        }
+        $this->score = $this->getComponent()->getGradeable()->roundPointValue($this->score);
         $this->modified = true;
     }
 
