@@ -3057,6 +3057,9 @@ AND gc_id IN (
             VALUES(?, ?, ?, ?, ?)";
         $this->course_db->query($query, $params);
 
+        // Setup the graded gradeable with its new id
+        $ta_graded_gradeable->setIdFromDatabase($this->course_db->getLastInsertId());
+
         // Also be sure to save the components
         $this->updateGradedComponents($ta_graded_gradeable);
     }
