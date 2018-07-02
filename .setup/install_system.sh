@@ -277,15 +277,15 @@ if [ ${WORKER} == 0 ]; then
         rm /etc/apache2/sites*/default-ssl.conf
 
         cp ${SUBMITTY_REPOSITORY}/.setup/vagrant/sites-available/submitty.conf /etc/apache2/sites-available/submitty.conf
-        cp ${SUBMITTY_REPOSITORY}/.setup/vagrant/sites-available/git.conf      /etc/apache2/sites-available/git.conf
+        cp ${SUBMITTY_REPOSITORY}/.setup/vagrant/sites-available/vcs.conf      /etc/apache2/sites-available/vcs.conf
 
         sed -i -e "s/SUBMITTY_URL/${SUBMISSION_URL:7}/g" /etc/apache2/sites-available/submitty.conf
-        sed -i -e "s/GIT_URL/${GIT_URL:7}/g" /etc/apache2/sites-available/git.conf
+        sed -i -e "s/VCS_URL/${VCS_URL:7}/g" /etc/apache2/sites-available/vcs.conf
 
         # permissions: rw- r-- ---
         chmod 0640 /etc/apache2/sites-available/*.conf
         a2ensite submitty
-        a2ensite git
+        a2ensite vcs
 
         sed -i '25s/^/\#/' /etc/pam.d/common-password
     	sed -i '26s/pam_unix.so obscure use_authtok try_first_pass sha512/pam_unix.so obscure minlen=1 sha512/' /etc/pam.d/common-password
@@ -455,7 +455,7 @@ else
     hsdbu
     America/New_York
     ${SUBMISSION_URL}
-    ${GIT_URL}/git
+    ${VCS_URL}/git
 
     1" | python3 ${SUBMITTY_REPOSITORY}/.setup/CONFIGURE_SUBMITTY.py --debug
 

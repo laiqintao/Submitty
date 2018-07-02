@@ -1241,7 +1241,20 @@ class Gradeable extends AbstractModel {
     }
 
     /**
+     * Constructs the repository path for a gradeable. This works by first checking to see if the configured
+     * subdirectory either has a :// (which marks it's a URI) or starts with a '/' (indicating it's an absolute path),
+     * else assume that we want to append the subdirectory to the VcsBaseUrl. We then proceed to replace our
+     * "variables" in the URI, which is gradeable_id, user_id, and team_id. Finally, we also replace out the
+     * path to the vcs/git folder for the specified repo uri as we show this path to students. This means that
+     * for gradeable_id foo and student bar, if the subdirectory is '{$gradeable_id}/{$user_id}/baz' and the VcsBaseUrl is
+     * '/var/local/submitty/vcs/git', and the VcsUrl is 'http://192.168.56.102/git', then what will happen is:
+     *
+     * 1. Append subdirectory to base url -> /var/local/submitty/vcs/git/{$gradeable_id}/{$user_id}/baz
+     * 2. Replace variables -> /var/local/submitty/vcs/git/foo/bar/baz
+     * 3. Replace out path for url -> http://192.168.56.102/git/foo/bar/baz
+     *
      * @param Team|null $team
+     *
      * @return string
      */
     public function getRepositoryPath($team = null) {
@@ -1258,7 +1271,8 @@ class Gradeable extends AbstractModel {
 
         $repo = str_replace('{$gradeable_id}', $this->getId(), $repo);
         $repo = str_replace('{$user_id}', $this->getUser()->getId(), $repo);
-        $repo = str_replace(FileUtils::joinPaths($this->core->getConfig()->getSubmittyPath(), 'vcs'),
+        $type = $this->core->getConfig()->getVcsType();
+        $repo = str_replace(FileUtils::joinPaths($this->core->getConfig()->getSubmittyPath(), 'vcs', $type),
             $this->core->getConfig()->getVcsUrl(), $repo);
         if ($this->isTeamAssignment()) {
             if ($team === null) {

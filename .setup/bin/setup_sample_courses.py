@@ -1015,6 +1015,7 @@ class Course(object):
             config = configparser.ConfigParser()    
             config.read(os.path.join(course_path, "config", "config.ini"))
             config.set("course_details", "forum_enabled", "true")
+            config.set('course_details', 'vcs_base_url', '/var/local/submitty/vcs/git')
             with open(os.path.join(course_path, "config", "config.ini"), 'w') as configfile:
                 config.write(configfile)
             f_data = (self.getForumDataFromFile('posts.txt'), self.getForumDataFromFile('threads.txt'), self.getForumDataFromFile('categories.txt'))
